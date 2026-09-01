@@ -406,6 +406,7 @@ func Setup(r *gin.Engine, hub *websocket.Hub, eventBus *events.EventBus) {
 			protected.GET("/machines", machineHandler.GetMachines)
 			protected.GET("/machines/:id", machineHandler.GetMachineByID)
 			protected.PATCH("/machines/:id", machineHandler.UpdateMachine)
+			protected.DELETE("/machines/:id", machineHandler.DeleteMachine)
 			protected.GET("/machines/:id/metrics", metricHandler.GetMachineMetrics)
 			protected.POST("/machines/:id/key-rotation", machineHandler.RotateMachineKey)
 			protected.GET("/machines/:id/history", handlers.GetMachineHistory)

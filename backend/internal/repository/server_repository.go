@@ -48,6 +48,51 @@ func (r *ServerRepository) GetServer(id uuid.UUID) (*models.Server, error) {
 	return &server, nil
 }
 
+func (r *ServerRepository) FindExistingServer(id uuid.UUID, hostname string, ipAddress string, macAddress string) (*models.Server, error) {
+	if database.DB == nil {
+		return nil, errors.New("database not available")
+	}
+
+	// 1. Match by ID if valid and non-nil
+	if id != uuid.Nil {
+		var s models.Server
+		if err := database.DB.First(&s, "id = ?", id).Error; err == nil {
+			return &s, nil
+		}
+	}
+
+	// 2. Match by MACAddress if provided
+	trimmedMAC := strings.TrimSpace(macAddress)
+	if trimmedMAC != "" {
+		var s models.Server
+		if err := database.DB.First(&s, "mac_address = ?", trimmedMAC).Error; err == nil {
+			return &s, nil
+		}
+	}
+
+	// 3. Match by Hostname and IP Address
+	trimmedHost := strings.TrimSpace(hostname)
+	trimmedIP := strings.TrimSpace(ipAddress)
+	if trimmedHost != "" && trimmedIP != "" {
+		var s models.Server
+		if err := database.DB.Order("CASE WHEN status = 'ONLINE' THEN 1 ELSE 2 END, last_seen DESC").
+			First(&s, "LOWER(hostname) = LOWER(?) AND ip_address = ?", trimmedHost, trimmedIP).Error; err == nil {
+			return &s, nil
+		}
+	}
+
+	// 4. Match by Hostname
+	if trimmedHost != "" {
+		var s models.Server
+		if err := database.DB.Order("CASE WHEN status = 'ONLINE' THEN 1 ELSE 2 END, last_seen DESC").
+			First(&s, "LOWER(hostname) = LOWER(?)", trimmedHost).Error; err == nil {
+			return &s, nil
+		}
+	}
+
+	return nil, errors.New("no matching server found")
+}
+
 func (r *ServerRepository) GetServerByIDOrHostname(identifier string) (*models.Server, error) {
 	if database.DB == nil {
 		if id, err := uuid.Parse(identifier); err == nil {

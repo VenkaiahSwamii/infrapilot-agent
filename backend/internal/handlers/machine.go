@@ -43,3 +43,8 @@ func (h *MachineHandler) RotateMachineKey(c *gin.Context) {
 func (h *MachineHandler) GetMachineKeyRotationStatus(c *gin.Context) {
 	h.serverHandler.GetServerKeyRotationStatus(c)
 }
+
+func (h *MachineHandler) DeleteMachine(c *gin.Context) {
+	h.serverHandler.DeleteServer(c)
+}
+

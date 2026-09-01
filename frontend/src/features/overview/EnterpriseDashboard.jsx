@@ -15,6 +15,7 @@ import {
   Terminal,
   ExternalLink,
   Eye,
+  Trash2,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
 import { listAlerts } from '../../api/alerts.js';
@@ -307,11 +308,22 @@ export default function EnterpriseDashboard() {
     };
   }, [fetchData]);
 
-  // Merge backend machines with formatted values
+  const handleDeleteMachine = async (machineId, hostname) => {
+    if (!machineId) return;
+    try {
+      await apiClient.delete(`/machines/${machineId}`).catch(() => {});
+      setMachines((prev) => prev.filter((m) => getMachineId(m) !== machineId));
+      setActiveMenuId(null);
+    } catch (err) {
+      console.error('Failed to remove machine', err);
+    }
+  };
+
+  // Merge backend machines with formatted values and smart deduplication
   const tableData = useMemo(() => {
     if (machines.length === 0) return DEFAULT_SAMPLE_MACHINES;
 
-    const realList = machines.map((m, idx) => {
+    const formattedList = machines.map((m, idx) => {
       const mId = getMachineId(m);
       const live = liveMetrics[mId] || {};
       const osStr = String(m.os || m.OS || live.os || '').toLowerCase();
@@ -348,10 +360,27 @@ export default function EnterpriseDashboard() {
         latencyTone: isOnline ? (10 + (idx * 3) % 12 > 15 ? 'amber' : 'green') : 'muted',
         status: isOnline ? 'online' : 'offline',
         last_seen: isOnline ? '2s ago' : '2m ago',
+        rawLastSeen: m.last_seen || m.LastSeen || new Date().toISOString(),
       };
     });
 
-    return realList;
+    // Enterprise Deduplication: collapse duplicates by normalized hostname, prioritizing ONLINE status and newest activity
+    const dedupMap = new Map();
+    formattedList.forEach((item) => {
+      const key = (item.hostname || '').toLowerCase().trim();
+      if (!dedupMap.has(key)) {
+        dedupMap.set(key, item);
+      } else {
+        const existing = dedupMap.get(key);
+        if (item.status === 'online' && existing.status !== 'online') {
+          dedupMap.set(key, item);
+        } else if (item.status === existing.status && new Date(item.rawLastSeen) > new Date(existing.rawLastSeen)) {
+          dedupMap.set(key, item);
+        }
+      }
+    });
+
+    return Array.from(dedupMap.values());
   }, [machines, liveMetrics]);
 
   // Derived Totals & KPI Stats
@@ -978,6 +1007,15 @@ export default function EnterpriseDashboard() {
                             >
                               <ExternalLink size={13} color="#a855f7" />
                               <span>Full Host Details</span>
+                            </button>
+                            <button
+                              className="popover-btn"
+                              onClick={() => handleDeleteMachine(m.id, m.hostname)}
+                              type="button"
+                              style={{ color: '#ef4444' }}
+                            >
+                              <Trash2 size={13} color="#ef4444" />
+                              <span>Remove Host</span>
                             </button>
                           </div>
                         )}

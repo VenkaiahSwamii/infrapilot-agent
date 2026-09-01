@@ -93,12 +93,12 @@ func (s *ServerService) PublishEvent(e events.Event) {
 }
 
 func (s *ServerService) RegisterOrUpdateServer(input RegisterServerInput) (*models.Server, error) {
-	server, err := s.serverRepo.GetServer(input.ID)
+	server, err := s.serverRepo.FindExistingServer(input.ID, input.Hostname, input.IPAddress, input.MACAddress)
 	if err == nil && server != nil {
 		// Update existing server record
 		applyServerRegistration(server, input)
 		server.Status = "ONLINE"
-		server.LastSeen = time.Now()
+		server.LastSeen = time.Now().UTC()
 
 		if err := s.serverRepo.UpdateServer(server); err != nil {
 			return nil, err
@@ -110,12 +110,16 @@ func (s *ServerService) RegisterOrUpdateServer(input RegisterServerInput) (*mode
 
 	// Create new server registry record
 	apiKey := generateServerAPIKey()
+	serverID := input.ID
+	if serverID == uuid.Nil {
+		serverID = uuid.New()
+	}
 	server = &models.Server{
-		ID:        input.ID,
+		ID:        serverID,
 		APIKey:    apiKey,
 		Status:    "ONLINE",
-		LastSeen:  time.Now(),
-		CreatedAt: time.Now(),
+		LastSeen:  time.Now().UTC(),
+		CreatedAt: time.Now().UTC(),
 	}
 	applyServerRegistration(server, input)
 
@@ -281,13 +285,24 @@ LEFT JOIN LATERAL (
     WHERE metrics.machine_id = m.id
     ORDER BY created_at DESC
     LIMIT 1
-) mt ON TRUE;
+) mt ON TRUE
+ORDER BY CASE WHEN UPPER(m.status) = 'ONLINE' THEN 1 ELSE 2 END, m.last_seen DESC;
 `).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 
 	result := make([]models.ServerSnapshot, 0, len(rows))
+	seenHosts := make(map[string]bool)
+
 	for _, row := range rows {
+		normHost := strings.ToLower(strings.TrimSpace(row.Hostname))
+		if normHost != "" {
+			if seenHosts[normHost] {
+				continue // Skip older duplicate
+			}
+			seenHosts[normHost] = true
+		}
+
 		metric := models.Metric{
 			MachineID:      row.ID,
 			CPUUsage:       row.CPUUsage,

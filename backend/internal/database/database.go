@@ -1,6 +1,7 @@
 package database
 
 import (
+	"strings"
 	"time"
 
 	"infrapilot/backend/internal/config"
@@ -234,11 +235,54 @@ func Connect() {
 	}
 
 	seedDefaultAdmin(db)
+	cleanupDuplicateServers(db)
 
 	logger.Info("PostgreSQL connected successfully",
 		"host", cfg.DBHost,
 		"database", cfg.DBName,
 	)
+}
+
+func cleanupDuplicateServers(db *gorm.DB) {
+	if db == nil {
+		return
+	}
+
+	type ServerRow struct {
+		ID        uuid.UUID
+		Hostname  string
+		IPAddress string
+		Status    string
+		LastSeen  time.Time
+	}
+
+	var servers []ServerRow
+	// Order by ONLINE status first, then most recent last_seen
+	if err := db.Table("servers").
+		Order("CASE WHEN UPPER(status) = 'ONLINE' THEN 1 ELSE 2 END, last_seen DESC, created_at DESC").
+		Find(&servers).Error; err != nil {
+		return
+	}
+
+	seen := make(map[string]uuid.UUID)
+	for _, s := range servers {
+		key := strings.ToLower(strings.TrimSpace(s.Hostname))
+		if key == "" {
+			continue
+		}
+		if keeperID, exists := seen[key]; exists {
+			// Older duplicate detected: migrate any foreign key references to keeperID
+			_ = db.Exec("UPDATE metrics SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			_ = db.Exec("UPDATE linux_metrics SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			_ = db.Exec("UPDATE agent_logs SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			_ = db.Exec("UPDATE file_operations SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			_ = db.Exec("UPDATE commands SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			// Delete duplicate server record
+			_ = db.Exec("DELETE FROM servers WHERE id = ?", s.ID).Error
+		} else {
+			seen[key] = s.ID
+		}
+	}
 }
 
 func seedDefaultAdmin(db *gorm.DB) {
