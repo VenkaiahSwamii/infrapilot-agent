@@ -1,5 +1,131 @@
+<<<<<<< HEAD
+# ============================================
+# InfraPilot Enterprise - Production .gitignore
+# ============================================
+
+# Dependencies
+node_modules/
+jspm_packages/
+web_modules/
+vendor/
+
+# Go binaries and caches
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+infrapilot
+backend/infrapilot
+agent/infrapilot
+.gocache-agent/
+.gocache-backend/
+*.prof
+*.prof.zip
+coverage.txt
+coverage.html
+
+# Build outputs
+dist/
+build/
+bin/
+out/
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Local env files
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backend
+backend/.env
+
+# IDE and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?
+*.code-workspace
+.project
+.classpath
+.settings/
+
+# OS metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+logs/
 *.log
-config.yaml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Database
+backend/db-data/
+*.sqlite
+*.db
+postgres-data/
+redis-data/
+
+# Docker
+docker-data/
+.dockerignore
+
+# Test artifacts
+test-results/
+coverage/
+.pytest_cache/
+
+# Cache directories
+.cache/
+tmp/
+temp/
+.tmp/
+
+# Installer outputs
+installer/output/
+installer/*.exe
+installer/*.msi
+
+# Screenshots and media (development)
+screenshots/dev-*
+demo/assets/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.bak
+*.orig
+
+# Let screenshots/README.md stay for documentation
+
+# Per-machine agent identity. Every installation must enroll independently.
+agent/config.json
+agent/offline_queue.json
 config.json
+config.yaml
 offline_queue.json
+backend/backups/
+backend/storage/
+*.sql
+InfraPilot-Agent/
+InfraPilot-Release/

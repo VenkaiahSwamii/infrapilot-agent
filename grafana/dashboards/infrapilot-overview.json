@@ -1,0 +1,165 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "InfraPilot Overview",
+    "tags": ["infrapilot"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Agents",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(up{job=\"infrapilot-backend\"})",
+            "legendFormat": "Backend"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 6,
+          "h": 3
+        }
+      },
+      {
+        "id": 2,
+        "title": "Total Machines",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(machine_status)",
+            "legendFormat": "Machines"
+          }
+        ],
+        "gridPos": {
+          "x": 6,
+          "y": 0,
+          "w": 6,
+          "h": 3
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m]))",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 6
+        }
+      },
+      {
+        "id": 4,
+        "title": "WebSocket Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "websocket_connections",
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 3,
+          "w": 12,
+          "h": 6
+        }
+      },
+      {
+        "id": 5,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "Active"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 9,
+          "w": 12,
+          "h": 6
+        }
+      },
+      {
+        "id": 6,
+        "title": "Redis Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Used"
+          }
+        ],
+        "gridPos": {
+          "x": 12,
+          "y": 6,
+          "w": 12,
+          "h": 6
+        }
+      },
+      {
+        "id": 7,
+        "title": "Worker Queue Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "worker_queue_size",
+            "legendFormat": "Queue"
+          }
+        ],
+        "gridPos": {
+          "x": 12,
+          "y": 12,
+          "w": 12,
+          "h": 6
+        }
+      },
+      {
+        "id": 8,
+        "title": "API Latency (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 6,
+          "w": 12,
+          "h": 6
+        }
+      }
+    ]
+  }
+}

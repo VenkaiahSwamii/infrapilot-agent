@@ -1,0 +1,187 @@
+# Jaeger Distributed Tracing Configuration (All-in-One for development/small deployments)
+# Reference: https://www.jaegertracing.io/docs/configuration/
+
+# Service discovery
+discovery:
+  min_hosts: 1
+
+# Query service configuration
+query:
+  port: 16686
+  http_port: 16686
+  grpc_port: 16685
+  memory:
+    max_traces: 100000
+
+  # Query base path (for reverse proxy)
+  # base_path: /jaeger
+
+  # Static configuration for storage
+  static:
+    - name: infrapilot-production
+      service: infrapilot-backend
+      strategy: static
+      ports:
+        - target: 14250
+          name: grpc
+
+# Collector service configuration
+collector:
+  port: 14250
+  http_port: 14268
+  grpc_port: 14250
+
+  # OTLP receiver (OpenTelemetry)
+  otlp:
+    enabled: true
+    http:
+      enabled: true
+      endpoint: 0.0.0.0:4318
+    grpc:
+      enabled: true
+      endpoint: 0.0.0.0:4317
+
+  # Zipkin receiver (for compatibility)
+  zipkin:
+    enabled: false
+    port: 9411
+
+  # HTTP endpoint for receiving spans
+  http:
+    enabled: true
+    endpoint: 0.0.0.0:14268
+
+# Agent configuration (for development, agent is optional)
+agent:
+  enabled: false
+
+# Storage configuration
+storage:
+  type: memory  # Use 'memory' for development, 'cassandra', 'elasticsearch', 'kafka' for production
+
+  # Memory storage options
+  memory:
+    max_traces: 100000
+    elasticity: true
+
+  # For production, use Cassandra or Elasticsearch
+  # cassandra:
+  #   servers:
+  #     - cassandra:9042
+  #   keyspace: jaeger
+  #   replication_factor: 1
+
+  # Elasticsearch storage (recommended for production)
+  # elasticsearch:
+  #   servers:
+  #     - http://elasticsearch:9200
+  #   num_shards: 5
+  #   num_replicas: 1
+  #   index_prefix: jaeger-history
+
+  # Kafka storage (for high-throughput production)
+  # kafka:
+  #   brokers:
+  #     - kafka:9092
+  #   topic: jaeger-spans
+
+# Ingester configuration (for Kafka storage)
+ingester:
+  enabled: false
+
+# Remote storage configuration
+remote_storage:
+  # jaeger_storage_backends: [memory]
+  # jaeger_storage_spanstore_type: memory
+
+# Metrics configuration
+metrics:
+  prometheus:
+    enabled: true
+    endpoint: /metrics
+    server_port: 14269
+
+# Logging configuration
+logging:
+  loglevel: info
+  format: json
+
+# Sampling configuration
+sampling:
+  default_probability: 1.0  # 100% sampling for development
+  # For production, use adaptive or probabilistic sampling
+  # strategies:
+  #   default_strategy:
+  #     type: probabilistic
+  #     param: 0.1  # Sample 10% of traces
+
+# Processing configuration
+processing:
+  options:
+    # Batch processor configuration
+    batch_processor:
+      num_workers: 100
+      queue_size: 10000
+      batch_size: 100
+      flush_interval: 1s
+
+    # Span processor configuration
+    span_processor:
+      max_queue_size: 200000
+      num_workers: 100
+      batch_size: 100
+      flush_interval: 1s
+
+# ESP (Extension Server Platform) configuration
+esp:
+  enabled: false
+
+# Health check configuration
+healthcheck:
+  enabled: true
+  port: 14269
+  max-traces: 100000
+
+# gRPC reflection (optional)
+reflection:
+  enabled: false
+
+# Service tags (metadata for the service itself)
+service_tags:
+  - domain: infrapilot-observability
+  - environment: production
+  - team: platform
+
+# Span processor (for production deployment)
+span_processor:
+  type: simple
+  options:
+    max_queue_size: 200000
+    num_workers: 100
+    batch_size: 100
+    flush_interval: 1s
+
+# For production deployment with multiple collectors:
+# Deploy Jaeger in agent-collector-query architecture
+# 1. Agent: runs on each host, forwards to collector
+# 2. Collector: receives spans from agents
+# 3. Query: serves UI and API
+# 4. Ingester: reads from Kafka, writes to storage
+
+# Collector configuration (production) - run separately
+# collector:
+#   max_processor_workers: 100
+#   num_workers: 100
+#   queue_size: 10000
+#   batch_size: 100
+
+# Query service configuration (production)
+# query:
+#   max_processor_workers: 100
+#   num_workers: 10
+#   cache_ttl: 10m
+#   es_integration:
+#     enabled: true
+#     hostname: elasticsearch
+#     port: 9200
+#     max_requests: 100

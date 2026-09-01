@@ -1,0 +1,224 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Build and push Docker images
+  build-and-push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, agent, security]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      run: |
+        echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      shell: bash
+    
+    - name: Build and push backend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile.backend
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.sha_short }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
+        labels: |
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+    
+    - name: Build and push frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile.frontend
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.sha_short }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.version }}
+        labels: |
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+    
+    - name: Build and push agent
+      uses: docker/build-push-action@v5
+      with:
+        context: ./agent
+        file: ./agent/Dockerfile.agent
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agent:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agent:${{ steps.meta.outputs.sha_short }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agent:${{ steps.meta.outputs.version }}
+        labels: |
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+
+  # Deploy to Kubernetes
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v4
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+    
+    - name: Update image tags
+      run: |
+        sed -i "s|image: infrapilot/backend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}|g" k8s/deployment.yaml
+        sed -i "s|image: infrapilot/frontend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}|g" k8s/deployment.yaml
+    
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f k8s/ -n infrapilot
+        kubectl rollout status deployment/infrapilot-backend -n infrapilot --timeout=300s
+        kubectl rollout status deployment/infrapilot-frontend -n infrapilot --timeout=300s
+    
+    - name: Verify deployment
+      run: |
+        kubectl get pods -n infrapilot
+        kubectl get services -n infrapilot
+        
+  # Create GitHub Release
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "Generating changelog from last tag..."
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+      shell: bash
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          ## What's New
+          
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Docker Images
+          
+          - Backend: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.ref_name }}`
+          - Frontend: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.ref_name }}`
+          - Agent: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agent:${{ github.ref_name }}`
+          
+          ## Installation
+          
+          ### Docker Compose
+          \`\`\`bash
+          docker compose up -d
+          \`\`\`
+          
+          ### Kubernetes
+          \`\`\`bash
+          kubectl apply -f k8s/
+          \`\`\`
+          
+          ## Documentation
+          
+          - [Installation Guide](https://docs.infrapilot.io/installation)
+          - [API Documentation](https://docs.infrapilot.io/api)
+          - [Architecture](https://docs.infrapilot.io/architecture)
+        draft: false
+        prerelease: false
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v4
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+    
+    - name: Update image tags for staging
+      run: |
+        sed -i "s|image: infrapilot/backend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}|g" k8s/deployment.yaml
+        sed -i "s|image: infrapilot/frontend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}|g" k8s/deployment.yaml
+    
+    - name: Deploy to staging
+      run: |
+        kubectl apply -f k8s/ -n infrapilot-staging
+        kubectl rollout status deployment/infrapilot-backend -n infrapilot-staging --timeout=300s
+    
+    - name: Run smoke tests
+      run: |
+        kubectl port-forward service/infrapilot-frontend 8080:80 &
+        sleep 10
+        curl -f http://localhost:8080/healthz || exit 1
+        curl -f http://localhost:8080/api/v1/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"admin@infrapilot.io","password":"admin123"}' || exit 1
+
+  # Notify team
+  notify:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy, release]
+    if: always()
+    
+    steps:
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+        payload: |
+          {
+            "text": "InfraPilot Deployment: ${{ job.status }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*InfraPilot Enterprise Deployment*\nStatus: *${{ job.status }}*\nBranch: ${{ github.ref }}\nCommit: ${{ github.sha }}"
+                }
+              }
+            ]
+          }

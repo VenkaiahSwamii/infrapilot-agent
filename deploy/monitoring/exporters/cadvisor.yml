@@ -1,0 +1,194 @@
+# cAdvisor Configuration
+# Reference: https://github.com/google/cadvisor
+
+# Web server configuration
+http:
+  listen_address: "0.0.0.0:8080"
+  # listen_address: "127.0.0.1:8080"  # Uncomment for localhost only
+  prometheus:
+    endpoint: "/metrics"
+    enabled: true
+  healthz:
+    endpoint: "/healthz"
+    enabled: true
+
+global:
+  # Housekeeping interval
+  housekeeping_interval: "10s"
+  # Maximum number of containers to store
+  max_housekeeping_containers: 10000
+  # Skip mountpoints to prevent high cardinality
+  skip_mountpoints:
+    - "/proc"
+    - "/sys"
+    - "/dev"
+    - "/run"
+    - "/var/run"
+    - "/snap"
+  # Skip filesystems to prevent high cardinality
+  skip_filesystems:
+    - "proc"
+    - "sysfs"
+    - "devtmpfs"
+    - "securityfs"
+    - "cgroup"
+    - "pstore"
+    - "efivarfs"
+    - "bpf"
+    - "tracefs"
+    - "debugfs"
+    - "hugetlbfs"
+    - "mqueue"
+    - "configfs"
+    - "fusectl"
+    - "autofs"
+    - "efs"
+    - "rpc_pipefs"
+    - "nsfs"
+    - "cgroup2"
+    - "devpts"
+
+# Storage driver configuration
+storage:
+  # Database driver (sqlite3 for single node, clickhouse for cluster)
+  driver: "sqlite3"
+  # Database connection string
+  db:
+    - name: "cadvisor"
+      driver: "sqlite3"
+      # For production, use clickhouse or influxdb
+      # driver: "clickhouse"
+      # source: "tcp://cadvisor_user:cadvisor_password@tcp(ch-hostname:9000)/cadvisor?sslmode=disable&read_timeout=10s&write_timeout=20s"
+      source: "/var/lib/cadvisor/cadvisor.db"
+      # Database maintenance
+      maintenance_period: 5m
+      # Number of maintenance operations
+      numMigrations: 2
+      # Clear database on start
+      reset_db: false
+
+# Metrics configuration
+metrics:
+  # Tcp connection tracking (high cardinality)
+  tcp_connection_tracking: true
+  # Enable CPU metrics
+  cpu: true
+  # Enable disk metrics
+  disk: true
+  # Enable filesystem metrics
+  filesystem: true
+  # Enable memory metrics
+  memory: true
+  # Enable network metrics
+  network: true
+  # Enable disk IO metrics
+  diskio: true
+
+# Docker daemon access
+daemon:
+  containers_from_containerd: false
+  docker:
+    # Docker socket path
+    socket: "unix:///var/run/docker.sock"
+    # Docker endpoint
+    endpoint: "unix:///var/run/docker.sock"
+  containerd:
+    endpoint: "unix:///var/run/containerd/containerd.sock"
+
+# Kubernetes support
+kubernetes:
+  # Enable Kubernetes support
+  enabled: true
+  # Kubernetes API server URL (leave empty for in-cluster config)
+  kubeconfig: ""
+  # Node name
+  node_name: ""
+  # Master URL
+  master_url: ""
+  # API Server certificate
+  # apiserver_cert: ""
+  # API Server key
+  # apiserver_key: ""
+
+# Event storage
+event_storage:
+  # Event storage duration
+  storage_duration: "5m"
+  # Allow truncated list
+  allow_old_events: false
+
+# Docker metadata
+docker:
+  # Enable Docker metadata
+  enabled: true
+
+# Prometheus output
+prometheus:
+  # Prometheus metrics endpoint
+  endpoint: "/metrics"
+  # Listen address
+  listen_address: "0.0.0.0:8080"
+  # Path tometrics
+  path: "/metrics"
+  # Enable rawCgroup metrics
+  raw_cgroup: false
+
+# Logging
+logging:
+  # Log mode: console, stderr, stdout, syslog
+  mode: "console"
+  # Log output: systemd, json, other formats
+  output: "systemd"
+  # Log format
+  format: "text"
+  # Log level: debug, info, warn, error
+  level: "info"
+
+# Arguments configuration (deprecated, use flags instead)
+arguments:
+  # Path to Docker daemon
+  docker: "unix:///var/run/docker.sock"
+  # Path to systemd cgroup directory
+  systemd_cgroup: "/system.slice"
+
+# Environment variables
+env_vars:
+  - "DOCKER_METRICS"
+  - "HOST_MACHINE"
+
+# Performance configuration
+performance:
+  # Number of goroutines
+  goroutines: 4
+  # Maximum number of processes
+  max_procs: 4
+
+# Debug configuration
+debug:
+  # Enable profiling
+  profiling: false
+  # Enable memory profiling
+  memprofile: ""
+  # Enable CPU profiling
+  cpuprofile: ""
+  # Enable trace
+  trace: ""
+
+# Disable network metrics if not needed
+# disable_network_metrics: true
+# disable_disk_io_metrics: true
+# disable_tcp_metrics: true
+
+# Align CPU stats to 1 second (requires Linux 4.14+)
+align_cpu_sets: false
+
+# Force cgroup namespace iteration
+force_namespaces: false
+
+# Store container labels as labels
+store_container_labels: true
+
+# Label whitelist (empty means all labels)
+# label_whitelist:
+#   - "org.label-schema.*"
+#   - "io.kubernetes.*"

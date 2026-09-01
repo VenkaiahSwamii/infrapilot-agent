@@ -1,0 +1,223 @@
+/* ═══════════════════════════════════════════════════════════
+   InfraPilot Enterprise – Buttons (buttons.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Base ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background var(--ease), border-color var(--ease),
+              transform var(--ease-spring), box-shadow var(--ease), color var(--ease);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.btn:active { transform: translateY(0) scale(0.97); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Primary ── */
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37,99,235,.40);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 6px 20px rgba(59,130,246,.50);
+  transform: translateY(-2px);
+}
+
+/* ── Cyan / Secondary ── */
+.btn-cyan {
+  background: linear-gradient(135deg, #0891b2, #06b6d4);
+  border-color: #0891b2;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(6,182,212,.35);
+}
+
+.btn-cyan:hover {
+  background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+  box-shadow: 0 6px 20px rgba(34,211,238,.45);
+  transform: translateY(-2px);
+}
+
+/* ── Success ── */
+.btn-success {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  border-color: #16a34a;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(22,163,74,.35);
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 6px 20px rgba(34,197,94,.40);
+  transform: translateY(-2px);
+}
+
+/* ── Danger ── */
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border-color: #dc2626;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(220,38,38,.35);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 6px 20px rgba(239,68,68,.40);
+  transform: translateY(-2px);
+}
+
+/* ── Ghost ── */
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--primary-dim);
+  border-color: var(--border-glow);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+/* ── Outline ── */
+.btn-outline {
+  background: transparent;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-outline:hover {
+  background: var(--primary-dim);
+  box-shadow: 0 4px 14px var(--primary-glow);
+  transform: translateY(-2px);
+}
+
+/* ── Icon Button ── */
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-icon:hover {
+  background: var(--primary-dim);
+  border-color: var(--border-glow);
+  color: var(--text);
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* ── Sizes ── */
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-lg {
+  height: 46px;
+  padding: 0 24px;
+  font-size: 0.94rem;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Loading state ── */
+.btn.is-loading {
+  pointer-events: none;
+}
+
+.btn.is-loading::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 4px;
+}
+
+/* ── Tab / Segmented Control ── */
+.tab-group {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: fit-content;
+}
+
+.tab-btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: calc(var(--radius) - 4px);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease), box-shadow var(--ease);
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(59,130,246,.4);
+}
+
+/* ── Back Button ── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+
+.back-btn:hover {
+  background: var(--primary-dim);
+  border-color: var(--border-glow);
+  color: var(--text);
+}

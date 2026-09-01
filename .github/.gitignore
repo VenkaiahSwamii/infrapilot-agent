@@ -1,0 +1,54 @@
+# GitHub Actions artifacts
+*.log
+*.tmp
+coverage.out
+coverage.html
+trivy-results.sarif
+release_notes.md
+CHANGELOG.md
+helm-packages/
+
+# Build artifacts
+dist/
+build/
+node_modules/
+vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+.test
+*.test
+coverage.txt
+coverage.xml
+junit.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (never commit!)
+*.pem
+*.key
+.env.local
+.env.production
+
+# Docker
+.dockerignore
+
+# Helm
+helm-packages/
+*.tgz
+
+# Temporary files
+*.tmp
+*.temp

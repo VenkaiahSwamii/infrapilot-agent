@@ -1,0 +1,204 @@
+/* ═══════════════════════════════════════════════════════════
+   InfraPilot Enterprise – Forms (forms.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Form Group ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: var(--danger);
+}
+
+/* ── Input / Textarea / Select ── */
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color var(--ease), box-shadow var(--ease), background var(--ease);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.form-textarea {
+  height: auto;
+  min-height: 96px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+  background: var(--surface-3);
+}
+
+.form-input:hover:not(:focus),
+.form-textarea:hover:not(:focus),
+.form-select:hover:not(:focus) {
+  border-color: rgba(148,163,184,.35);
+}
+
+/* Error state */
+.form-input.is-error,
+.form-textarea.is-error,
+.form-select.is-error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239,68,68,.14);
+}
+
+.form-error {
+  font-size: 0.76rem;
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Select chevron ── */
+.form-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-select option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ── Search Box ── */
+.search-box-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--ease), box-shadow var(--ease);
+  color: var(--text-muted);
+  width: min(320px, 100%);
+}
+
+.search-box-v2:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.14);
+  color: var(--text-secondary);
+}
+
+.search-box-v2 input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.87rem;
+  font-family: var(--font-sans);
+}
+
+.search-box-v2 input::placeholder { color: var(--text-muted); }
+
+/* ── Checkbox & Radio ── */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.form-check-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ── Alert / Banner ── */
+.form-alert {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 0.84rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.form-alert-error {
+  background: var(--danger-dim);
+  border: 1px solid rgba(239,68,68,.22);
+  color: #fca5a5;
+}
+
+.form-alert-success {
+  background: var(--success-dim);
+  border: 1px solid rgba(34,197,94,.22);
+  color: #86efac;
+}
+
+.form-alert-info {
+  background: var(--primary-dim);
+  border: 1px solid rgba(59,130,246,.22);
+  color: #93c5fd;
+}
+
+/* ── Code / Command Box ── */
+.code-box {
+  padding: 14px 16px;
+  background: #060a11;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.80rem;
+  color: #bae6fd;
+  overflow-x: auto;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.code-box-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

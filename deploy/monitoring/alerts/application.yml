@@ -1,0 +1,212 @@
+groups:
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # Backend API Down
+      - alert: APIUnavailable
+        expr: up{job="backend-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: application
+          service: backend
+        annotations:
+          summary: "Backend API is unavailable"
+          description: "Backend API has been unreachable for more than 1 minute"
+          hostname: "{{ $labels.instance }}"
+          metric: "API availability"
+          value: "DOWN"
+          suggested_action: "Check backend service status, restart if necessary"
+
+      # High API Latency
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: application
+          service: backend
+        annotations:
+          summary: "High API latency on {{ $labels.instance }}"
+          description: "95th percentile latency is {{ $value }}s"
+          hostname: "{{ $labels.instance }}"
+          metric: "API latency"
+          value: "{{ $value }}s"
+          suggested_action: "Check database queries, optimize slow endpoints, scale horizontally"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: application
+          service: backend
+        annotations:
+          summary: "High error rate on {{ $labels.instance }}"
+          description: "Error rate is {{ $value }}%"
+          hostname: "{{ $labels.instance }}"
+          metric: "Error rate"
+          value: "{{ $value }}%"
+          suggested_action: "Check application logs, investigate recent deployments or configuration changes"
+
+      # Database Unavailable
+      - alert: DatabaseUnavailable
+        expr: up{job="postgres"} == 0 or up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+          service: database
+        annotations:
+          summary: "Database service is unavailable"
+          description: "One or more database services are unreachable"
+          hostname: "{{ $labels.instance }}"
+          metric: "Database status"
+          value: "DOWN"
+          suggested_action: "Check database containers, restore from backup if necessary"
+
+      # High Database Connections
+      - alert: HighDatabaseConnections
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: postgres
+        annotations:
+          summary: "High database connections on {{ $labels.instance }}"
+          description: "Database connections at {{ $value }}% of max"
+          hostname: "{{ $labels.instance }}"
+          metric: "Database connections"
+          value: "{{ $value }}%"
+          suggested_action: "Investigate connection leaks, increase max connections, use connection pooling"
+
+      # Slow Database Queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95, rate(pg_stat_statements_execution_time_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: postgres
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s"
+          metric: "Query latency"
+          value: "{{ $value }}s"
+          suggested_action: "Analyze slow query log, optimize indexes, review query plans"
+
+      # Redis Down
+      - alert: RedisUnavailable
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+          service: redis
+        annotations:
+          summary: "Redis is unavailable"
+          description: "Redis service is unreachable"
+          hostname: "{{ $labels.instance }}"
+          metric: "Redis status"
+          value: "DOWN"
+          suggested_action: "Check Redis service, restore from persistence if necessary"
+
+      # High Redis Memory Usage
+      - alert: HighRedisMemoryUsage
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: redis
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value }}%"
+          metric: "Redis memory"
+          value: "{{ $value }}%"
+          suggested_action: "Evict old keys, increase maxmemory, review cache TTLs"
+
+      # Agent Offline
+      - alert: AgentOffline
+        expr: time() - agent_last_heartbeat_timestamp > 45
+        for: 1m
+        labels:
+          severity: warning
+          category: application
+          service: agent
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} is offline"
+          description: "Agent has not sent heartbeat for {{ $value }}s"
+          hostname: "{{ $labels.host }}"
+          metric: "Agent heartbeat"
+          value: "{{ $value }}s"
+          suggested_action: "Check agent service, network connectivity, and system resources"
+
+      # High WebSocket Connections
+      - alert: HighWebSocketConnections
+        expr: websocket_active_connections > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: application
+          service: backend
+        annotations:
+          summary: "High WebSocket connection count"
+          description: "Active WebSocket connections: {{ $value }}"
+          metric: "WebSocket connections"
+          value: "{{ $value }}"
+          suggested_action: "Check for connection leaks, review scaling configuration"
+
+      # Failed Deployments
+      - alert: FailedDeployment
+        expr: increase(deploy_total{status="failed"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: application
+          service: deploy
+        annotations:
+          summary: "Deployment failed on {{ $labels.host }}"
+          description: "Deployment to {{ $labels.host }} failed"
+          hostname: "{{ $labels.host }}"
+          metric: "Deployment status"
+          value: "FAILED"
+          suggested_action: "Check deployment logs, rollback to previous version"
+
+      # Qdrant Unavailable
+      - alert: QdrantUnavailable
+        expr: up{job="qdrant"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+          service: qdrant
+        annotations:
+          summary: "Qdrant vector database is unavailable"
+          description: "Qdrant service is unreachable"
+          hostname: "{{ $labels.instance }}"
+          metric: "Qdrant status"
+          value: "DOWN"
+          suggested_action: "Check Qdrant service, verify collections integrity"
+
+      # Low Agent Registration Rate
+      - alert: LowAgentRegistration
+        expr: rate(agent_registrations_total[1h]) < 1
+        for: 1h
+        labels:
+          severity: info
+          category: application
+          service: agent
+        annotations:
+          summary: "Low agent registration rate"
+          description: "Less than 1 agent registration in the last hour"
+          metric: "Agent registrations"
+          value: "{{ $value }}/hour"
+          suggested_action: "Verify agent enrollment process, check onboarding documentation"

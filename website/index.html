@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraPilot Enterprise - Infrastructure Monitoring Platform</title>
+    <meta name="description" content="Enterprise-grade infrastructure monitoring platform with real-time metrics, AI-powered analytics, and comprehensive observability.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>InfraPilot</h1>
+                <span class="version">Enterprise v1.0</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home">Home</a></li>
+                <li><a href="case-study.html">Case Study</a></li>
+                <li><a href="skills.html">Skills</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#docs">Documentation</a></li>
+                <li><a href="#download" class="btn-primary">Download</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Enterprise Infrastructure Monitoring</h1>
+                <p class="hero-subtitle">Real-time visibility into your entire infrastructure with AI-powered insights and comprehensive observability.</p>
+                <div class="hero-cta">
+                    <a href="#download" class="btn-primary btn-large">Get Started</a>
+                    <a href="#docs" class="btn-secondary btn-large">View Documentation</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <h3>10K+</h3>
+                        <p>Metrics/Second</p>
+                    </div>
+                    <div class="stat">
+                        <h3>< 50ms</h3>
+                        <p>API Latency</p>
+                    </div>
+                    <div class="stat">
+                        <h3>99.9%</h3>
+                        <p>Uptime SLA</p>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="dashboard-preview">
+                    <div class="dashboard-header">
+                        <div class="window-controls">
+                            <span class="control red"></span>
+                            <span class="control yellow"></span>
+                            <span class="control green"></span>
+                        </div>
+                        <span class="dashboard-title">InfraPilot Dashboard</span>
+                    </div>
+                    <div class="dashboard-content">
+                        <div class="metric-grid">
+                            <div class="metric-card">
+                                <h4>CPU Usage</h4>
+                                <div class="metric-value">45%</div>
+                                <div class="metric-chart"></div>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Memory</h4>
+                                <div class="metric-value">62%</div>
+                                <div class="metric-chart"></div>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Disk</h4>
+                                <div class="metric-value">34%</div>
+                                <div class="metric-chart"></div>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Network</h4>
+                                <div class="metric-value">1.2GB</div>
+                                <div class="metric-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Powerful Features</h2>
+            <p class="section-subtitle">Everything you need to monitor, manage, and optimize your infrastructure.</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-Time Monitoring</h3>
+                    <p>Live metrics for CPU, memory, disk, and network across all your machines with sub-second updates.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI-Powered Analytics</h3>
+                    <p>Intelligent anomaly detection, predictive analytics, and root cause analysis using machine learning.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🐳</div>
+                    <h3>Docker Monitoring</h3>
+                    <p>Monitor container metrics, events, and logs. Track resource usage and optimize container performance.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">☸️</div>
+                    <h3>Kubernetes Integration</h3>
+                    <p>Native Kubernetes monitoring with pod, node, and deployment metrics. Cluster health at a glance.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h3>Remote Terminal</h3>
+                    <p>Secure web-based terminal access to any machine. No SSH client required with full session management.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>File Manager</h3>
+                    <p>Browse and manage files on remote systems. Upload, download, and edit files through the web interface.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3>Log Management</h3>
+                    <p>Centralized log collection with powerful search, filtering, and alerting. Never miss critical events.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Reports & Analytics</h3>
+                    <p>Generate PDF, Excel, and CSV reports. Schedule automated reports and track trends over time.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔔</div>
+                    <h3>Smart Alerting</h3>
+                    <p>Intelligent alerting with AI-powered deduplication and correlation. Reduce alert fatigue by 90%.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Enterprise Security</h3>
+                    <p>JWT authentication, RBAC, MFA, and audit logging. SOC 2 and GDPR compliant.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>High Performance</h3>
+                    <p>Built with Go and Redis for blazing fast performance. Handle 100K+ metrics per second.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3>Cloud Native</h3>
+                    <p>Docker and Kubernetes ready. Deploy anywhere with our production-ready manifests.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2>Simple Pricing</h2>
+            <p class="section-subtitle">Choose the perfect plan for your team.</p>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Open Source</h3>
+                    <div class="price">Free</div>
+                    <ul class="pricing-features">
+                        <li>✓ Up to 10 machines</li>
+                        <li>✓ Basic monitoring</li>
+                        <li>✓ Community support</li>
+                        <li>✓ Docker deployment</li>
+                    </ul>
+                    <a href="#download" class="btn-secondary">Download</a>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <div class="badge">Popular</div>
+                    <h3>Enterprise</h3>
+                    <div class="price">$99/month</div>
+                    <ul class="pricing-features">
+                        <li>✓ Unlimited machines</li>
+                        <li>✓ AI-powered analytics</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ Kubernetes deployment</li>
+                        <li>✓ Advanced security</li>
+                    </ul>
+                    <a href="#contact" class="btn-primary">Contact Sales</a>
+                </div>
+                
+                <div class="pricing-card">
+                    <h3>Enterprise Plus</h3>
+                    <div class="price">Custom</div>
+                    <ul class="pricing-features">
+                        <li>✓ Everything in Enterprise</li>
+                        <li>✓ Dedicated support</li>
+                        <li>✓ Custom integrations</li>
+                        <li>✓ SLA guarantee</li>
+                        <li>✓ On-premise deployment</li>
+                    </ul>
+                    <a href="#contact" class="btn-secondary">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section id="docs" class="documentation">
+        <div class="container">
+            <h2>Documentation</h2>
+            <p class="section-subtitle">Everything you need to get started and master InfraPilot.</p>
+            
+            <div class="docs-grid">
+                <a href="docs/installation.md" class="doc-card">
+                    <div class="doc-icon">📖</div>
+                    <h4>Installation Guide</h4>
+                    <p>Step-by-step installation instructions</p>
+                </a>
+                
+                <a href="docs/architecture.md" class="doc-card">
+                    <div class="doc-icon">🏗️</div>
+                    <h4>Architecture</h4>
+                    <p>System design and architecture overview</p>
+                </a>
+                
+                <a href="docs/api.md" class="doc-card">
+                    <div class="doc-icon">🔌</div>
+                    <h4>API Reference</h4>
+                    <p>Complete REST API documentation</p>
+                </a>
+                
+                <a href="docs/deployment.md" class="doc-card">
+                    <div class="doc-icon">🚀</div>
+                    <h4>Deployment Guide</h4>
+                    <p>Production deployment best practices</p>
+                </a>
+                
+                <a href="docs/security.md" class="doc-card">
+                    <div class="doc-icon">🔒</div>
+                    <h4>Security Guide</h4>
+                    <p>Security best practices and hardening</p>
+                </a>
+                
+                <a href="docs/troubleshooting.md" class="doc-card">
+                    <div class="doc-icon">🔧</div>
+                    <h4>Troubleshooting</h4>
+                    <p>Common issues and solutions</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="container">
+            <h2>Download InfraPilot</h2>
+            <p class="section-subtitle">Get started in minutes with our easy installation options.</p>
+            
+            <div class="download-grid">
+                <div class="download-card">
+                    <div class="download-icon">🐧</div>
+                    <h3>Linux</h3>
+                    <p>One-line installer for Ubuntu, Debian, CentOS, RHEL</p>
+                    <code>curl -fsSL https://install.infrapilot.io | bash</code>
+                    <button class="copy-btn" onclick="copyToClipboard('curl -fsSL https://install.infrapilot.io | bash')">Copy</button>
+                </div>
+                
+                <div class="download-card">
+                    <div class="download-icon">🪟</div>
+                    <h3>Windows</h3>
+                    <p>Easy installer for Windows 10/11</p>
+                    <a href="#" class="btn-primary">Download .exe</a>
+                </div>
+                
+                <div class="download-card">
+                    <div class="download-icon">🐳</div>
+                    <h3>Docker</h3>
+                    <p>Run with Docker Compose</p>
+                    <code>docker compose up -d</code>
+                    <button class="copy-btn" onclick="copyToClipboard('docker compose up -d')">Copy</button>
+                </div>
+                
+                <div class="download-card">
+                    <div class="download-icon">☸️</div>
+                    <h3>Kubernetes</h3>
+                    <p>Deploy to your Kubernetes cluster</p>
+                    <code>kubectl apply -f k8s/</code>
+                    <button class="copy-btn" onclick="copyToClipboard('kubectl apply -f k8s/')">Copy</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2>Get in Touch</h2>
+            <p class="section-subtitle">Have questions? We'd love to hear from you.</p>
+            
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <div class="contact-icon">📧</div>
+                    <h3>Email</h3>
+                    <p>support@infrapilot.io</p>
+                </div>
+                
+                <div class="contact-card">
+                    <div class="contact-icon">💬</div>
+                    <h3>Discord</h3>
+                    <p>Join our community</p>
+                    <a href="https://discord.gg/infrapilot" class="link">Join Discord</a>
+                </div>
+                
+                <div class="contact-card">
+                    <div class="contact-icon">🐙</div>
+                    <h3>GitHub</h3>
+                    <p>Star us on GitHub</p>
+                    <a href="https://github.com/infrapilot" class="link">View Repository</a>
+                </div>
+                
+                <div class="contact-card">
+                    <div class="contact-icon">🐦</div>
+                    <h3>Twitter</h3>
+                    <p>Follow us for updates</p>
+                    <a href="https://twitter.com/infrapilot" class="link">@infrapilot</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3>InfraPilot Enterprise</h3>
+                    <p>Enterprise-grade infrastructure monitoring.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#pricing">Pricing</a>
+                        <a href="#download">Download</a>
+                    </div>
+                    <div class="link-group">
+                        <h4>Resources</h4>
+                        <a href="#docs">Documentation</a>
+                        <a href="https://github.com/infrapilot">GitHub</a>
+                        <a href="#">Blog</a>
+                    </div>
+                    <div class="link-group">
+                        <h4>Company</h4>
+                        <a href="#contact">Contact</a>
+                        <a href="#">About</a>
+                        <a href="#">Careers</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 InfraPilot Enterprise. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

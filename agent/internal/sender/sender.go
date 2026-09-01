@@ -1,0 +1,97 @@
+package sender
+
+import (
+	"encoding/json"
+	"log"
+
+	"infrapilot/agent/internal/cache"
+	"infrapilot/agent/internal/client"
+	"infrapilot/agent/internal/state"
+)
+
+// SendMetrics transmits metrics payload via HTTP POST. If offline, it queues them.
+func SendMetrics(backendURL string, machineID string, apiKey string, metrics interface{}) error {
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		return err
+	}
+
+	endpoint := backendURL + "/api/v1/servers/" + machineID + "/metrics"
+	err = client.PostWithRetry(
+		endpoint,
+		data,
+		"application/json",
+	)
+
+	if err != nil {
+		log.Println("[Sender] Metrics upload failed, caching offline:", err)
+		state.Connected = false
+		cache.QueueMetric(metrics)
+		return err
+	}
+
+	state.Connected = true
+	log.Println("[Sender] Metrics uploaded successfully.")
+
+	// If successfully sent, replay cached offline metrics in background
+	if cache.QueueSize() > 0 {
+		go ReplayCachedMetrics(backendURL, machineID)
+	}
+
+	return nil
+}
+
+// SendLogs transmits a batch of log entries via HTTP POST to /api/v1/logs.
+func SendLogs(backendURL string, logsPayload interface{}) error {
+	data, err := json.Marshal(logsPayload)
+	if err != nil {
+		return err
+	}
+
+	endpoint := backendURL + "/api/v1/agent/logs"
+	err = client.PostWithRetry(
+		endpoint,
+		data,
+		"application/json",
+	)
+	if err != nil {
+		log.Println("[Sender] Logs upload failed:", err)
+		return err
+	}
+
+	log.Println("[Sender] Log entries uploaded successfully.")
+	return nil
+}
+
+// ReplayCachedMetrics uploads previously queued metrics when agent was offline
+func ReplayCachedMetrics(backendURL string, machineID string) {
+	log.Printf("[Sender] Replaying %d cached offline telemetry payloads...", cache.QueueSize())
+	for {
+		item, ok := cache.PopMetric()
+		if !ok {
+			break
+		}
+
+		data, err := json.Marshal(item)
+		if err != nil {
+			log.Printf("[Sender] Failed to serialize cached item: %v", err)
+			continue
+		}
+
+		endpoint := backendURL + "/api/v1/servers/" + machineID + "/metrics"
+		err = client.PostWithRetry(
+			endpoint,
+			data,
+			"application/json",
+		)
+
+		if err != nil {
+			log.Printf("[Sender] Failed to upload cached telemetry, re-queueing: %v", err)
+			cache.QueueMetric(item)
+			state.Connected = false
+			break
+		}
+
+		log.Println("[Sender] Successfully uploaded cached telemetry payload.")
+	}
+}

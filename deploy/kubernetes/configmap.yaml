@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infrapilot-config
+  namespace: infrapilot
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  METRICS_INTERVAL: "15s"
+  DATABASE_HOST: "infrapilot-postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "infrapilot_enterprise"
+  REDIS_HOST: "infrapilot-redis"
+  REDIS_PORT: "6379"
+  QDRANT_URL: "http://infrapilot-qdrant:6333"
+  REDIS_CONFIG: |
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+    save 900 1
+    save 300 10
+    save 60 10000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infrapilot-postgres-config
+  namespace: infrapilot
+data:
+  POSTGRES_DB: infrapilot_enterprise
+  POSTGRES_USER: postgres
+  POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+  REPLICATION_MODE: "primary"
+  REPLICATION_USER: replicator
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infrapilot-qdrant-config
+  namespace: infrapilot
+data:
+  QDRANT__SERVICE__HTTP_PORT: "6333"
+  QDRANT__SERVICE__GRPC_PORT: "6334"
+  QDRANT__TELEMETRY__DISABLED: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: infrapilot
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: infrapilot-prod
+        namespace: infrapilot
+    
+    scrape_configs:
+      - job_name: 'infrapilot-backend'
+        static_configs:
+          - targets: ['infrapilot-backend:9090']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+      
+      - job_name: 'infrapilot-postgres'
+        static_configs:
+          - targets: ['infrapilot-postgres-exporter:9187']
+        scrape_interval: 15s
+      
+      - job_name: 'infrapilot-redis'
+        static_configs:
+          - targets: ['infrapilot-redis-exporter:9121']
+        scrape_interval: 15s
+      
+      - job_name: 'infrapilot-qdrant'
+        static_configs:
+          - targets: ['infrapilot-qdrant:6333']
+        metrics_path: '/metrics'
+        scrape_interval: 15s

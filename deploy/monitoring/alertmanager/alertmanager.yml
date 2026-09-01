@@ -1,0 +1,270 @@
+global:
+  resolve_timeout: 5m
+  http_config:
+    timeout: 30s
+    follow_redirects: true
+    enable_http2: true
+
+  # Default SMTP configuration (update with your SMTP server)
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'infrapilot-alerts@yourdomain.com'
+  smtp_auth_username: 'your-email@gmail.com'
+  smtp_auth_password: 'your-app-password'
+  smtp_require_tls: true
+
+  # Slack configuration
+  slack_api_url: 'https://example.com/services/YOUR/SLACK/WEBHOOK'
+
+  # Microsoft Teams configuration
+  teams_api_url: 'https://example.com/webhook/YOUR/WEBHOOK/URL'
+
+  # Discord configuration
+  discord_api_url: 'https://example.com/api/webhooks/YOUR/WEBHOOK/URL'
+
+# Directory to store alert state and temporary files
+data_dir: /alertmanager
+
+# Template files for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for alert routing
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'cluster', 'service', 'severity']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 1h
+  continue: false
+
+  # Child routes for different alert categories
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 30m
+      continue: true
+
+    # Warning alerts - batched notifications
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 30s
+      group_interval: 10m
+      repeat_interval: 2h
+
+    # Info alerts - daily summary
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 24h
+
+    # Category-specific routing
+    - match:
+        category: infrastructure
+      receiver: 'infrastructure-alerts'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 4h
+
+    - match:
+        category: application
+      receiver: 'application-alerts'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 4h
+
+    - match:
+        category: database
+      receiver: 'database-alerts'
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1h
+
+# Receivers for different notification channels
+receivers:
+  # Default receiver (catches all unmatched alerts)
+  - name: 'default'
+    email_configs:
+      - to: 'ops-team@yourdomain.com'
+        headers:
+          Subject: '[InfraPilot] Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+
+  # Critical alerts - all channels
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'oncall@yourdomain.com'
+        headers:
+          Subject: '[CRITICAL] InfraPilot Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.critical" . }}'
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#infrapilot-alerts'
+        title: '[CRITICAL] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+        send_resolved: true
+        footer: 'InfraPilot Alertmanager'
+
+    teams_configs:
+      - webhook_url: 'https://outlook.office.com/webhook/YOUR/WEBHOOK/URL'
+        title: '[CRITICAL] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+    discord_configs:
+      - webhook_url: 'https://discord.com/api/webhooks/YOUR/WEBHOOK/URL'
+        title: '[CRITICAL] {{ .GroupLabels.alertname }}'
+      message: '{{ .CommonAnnotations.description }}'
+      username: 'InfraPilot Alerts'
+      send_resolved: true
+
+    # PagerDuty for critical alerts (optional)
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        description: '{{ .CommonAnnotations.description }}'
+        severity: critical
+        client: 'InfraPilot'
+        client_url: 'https://infrapilot.yourdomain.com'
+
+  # Warning alerts - email and Slack
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'ops-team@yourdomain.com'
+        headers:
+          Subject: '[WARNING] InfraPilot Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.warning" . }}'
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#infrapilot-warnings'
+        title: '[WARNING] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+        send_resolved: true
+        footer: 'InfraPilot Alertmanager'
+
+    teams_configs:
+      - webhook_url: 'https://outlook.office.com/webhook/YOUR/WEBHOOK/URL'
+        title: '[WARNING] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+  # Info alerts - email only, daily digest
+  - name: 'info-alerts'
+    email_configs:
+      - to: 'dev-team@yourdomain.com'
+        headers:
+          Subject: '[INFO] InfraPilot Daily Digest: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+
+  # Infrastructure alerts
+  - name: 'infrastructure-alerts'
+    email_configs:
+      - to: 'infra-team@yourdomain.com'
+        headers:
+          Subject: '[INFRA] InfraPilot Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+
+    slack_configs:
+      - channel: '#infrapilot-infra'
+        title: '[INFRA] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
+        send_resolved: true
+
+  # Application alerts
+  - name: 'application-alerts'
+    email_configs:
+      - to: 'dev-team@yourdomain.com'
+        headers:
+          Subject: '[APP] InfraPilot Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+
+    slack_configs:
+      - channel: '#infrapilot-app'
+        title: '[APP] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
+        send_resolved: true
+
+  # Database alerts
+  - name: 'database-alerts'
+    email_configs:
+      - to: 'dba-team@yourdomain.com'
+        headers:
+          Subject: '[DB] InfraPilot Alert: {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.default.html" . }}'
+
+    slack_configs:
+      - channel: '#infrapilot-db'
+        title: '[DB] {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+        send_resolved: true
+
+    # PagerDuty for database critical alerts
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_DBA_SERVICE_KEY'
+        description: '{{ .CommonAnnotations.description }}'
+        severity: '{{ if eq .CommonLabels.severity "critical" }}critical{{ else }}error{{ end }}'
+        client: 'InfraPilot'
+        client_url: 'https://infrapilot.yourdomain.com'
+
+# Inhibition rules to suppress redundant alerts
+inhibit_rules:
+  # Suppress node down alerts if node exporter is down
+  - source_match:
+      alertname: 'NodeDown'
+    target_match:
+      alertname: 'HighCPUUsage'
+    equal: ['instance']
+
+  # Suppress container alerts if cAdvisor is down
+  - source_match:
+      alertname: 'ContainerDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['job']
+
+  # Suppress database connection alerts if database is down
+  - source_match:
+      alertname: 'DatabaseUnavailable'
+    target_match_re:
+      alertname: 'HighDatabaseConnections|SlowDatabaseQueries'
+    equal: ['service']
+
+  # Suppress Redis alerts if Redis is down
+  - source_match:
+      alertname: 'RedisUnavailable'
+    target_match_re:
+      alertname: 'HighRedisMemoryUsage'
+    equal: ['service']
+
+  # Suppress API alerts if API is down
+  - source_match:
+      alertname: 'APIUnavailable'
+    target_match_re:
+      alertname: 'HighAPILatency|HighErrorRate'
+    equal: ['service']
+
+  # Suppress node alerts if node is down
+  - source_match:
+      alertname: 'NodeDown'
+    target_match_re:
+      alertname: 'High.*Usage|HighLoadAverage|HighPacketLoss'
+    equal: ['instance']
+
+  # Critical alerts suppress warning alerts
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['service']

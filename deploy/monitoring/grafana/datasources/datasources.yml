@@ -1,0 +1,107 @@
+apiVersion: 1
+
+datasources:
+  # Prometheus - Metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+      manageAlerts: true
+      prometheusType: Prometheus
+      cacheLevel: "High"
+      incrementalQuery: true
+    version: 1
+
+  # Loki - Logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+      legacyBroadcast: false
+    version: 1
+
+  # Jaeger - Distributed Tracing
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      tracesToLogs:
+        datasourceUid: "loki-uid"
+        tags: ["host", "pod", "namespace"]
+        mappedTags: [{ key: "service.name", value: "service" }]
+      tracesToMetrics:
+        datasourceUid: "prometheus-uid"
+        tags: [{ key: "service.name", value: "service" }]
+      serviceMap:
+        datasourceUid: "prometheus-uid"
+      spanBar:
+        show: true
+    version: 1
+
+  # Tempo (optional - alternative to Jaeger)
+  # - name: Tempo
+  #   type: tempo
+  #   access: proxy
+  #   url: http://tempo:3200
+  #   jsonData:
+  #     tracesToMetrics:
+  #       datasourceUid: "prometheus-uid"
+  #       tags: [{ key: "service.name", value: "service" }]
+  #     serviceMap:
+  #       datasourceUid: "prometheus-uid"
+  #   version: 1
+
+  # PostgreSQL - Database Metrics
+  - name: PostgreSQL
+    type: postgresql
+    access: proxy
+    url: postgres:5432
+    database: infrapilot
+    user: infrapilot
+    isDefault: false
+    editable: true
+    jsonData:
+      sslmode: "disable"
+      maxOpenConns: 100
+      maxIdleConns: 100
+      connMaxLifetime: 14400
+      postgresVersion: 1400
+    secureJsonData:
+      password: "infrapilot_password"
+    version: 1
+
+  # Redis - Cache Metrics
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis:6379
+    editable: true
+    jsonData:
+      timeout: 10
+      pipelineWindow: 100
+    version: 1
+
+  # Elasticsearch (optional - for log search)
+  # - name: Elasticsearch
+  #   type: elasticsearch
+  #   access: proxy
+  #   url: http://elasticsearch:9200
+  #   editable: true
+  #   jsonData:
+  #     esVersion: "8.0.0"
+  #     timeField: "@timestamp"
+  #     logMessageField: "message"
+  #     logLevelField: "severity"
+  #   version: 1

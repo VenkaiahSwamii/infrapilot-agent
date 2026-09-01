@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills & Technologies | Venkaiah Swami</title>
+    <meta name="description" content="Technical skills and technologies used in InfraPilot Enterprise - Go, React, Kubernetes, PostgreSQL, Redis, and more.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .skills-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        .skills-container h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            color: #1a1a2e;
+        }
+        .skills-container .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 50px;
+        }
+        .skill-category {
+            margin-bottom: 50px;
+        }
+        .skill-category h2 {
+            font-size: 1.8em;
+            color: #0066cc;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0066cc;
+        }
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .skill-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .skill-card:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            border-color: #0066cc;
+        }
+        .skill-card h3 {
+            font-size: 1.3em;
+            margin: 0 0 10px 0;
+            color: #1a1a2e;
+        }
+        .skill-card .skill-level {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e3f2fd;
+            color: #0066cc;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .skill-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .skill-card li {
+            padding: 6px 0;
+            color: #555;
+            line-height: 1.6;
+        }
+        .skill-card li::before {
+            content: '▸ ';
+            color: #0066cc;
+            font-weight: bold;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .certification-box {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e3f2fd 100%);
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .certification-box h4 {
+            margin: 0 0 10px 0;
+            color: #0066cc;
+        }
+        .certification-box p {
+            margin: 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><a href="index.html" style="text-decoration: none; color: inherit;">InfraPilot</a></h1>
+                <span class="version">Skills</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="case-study.html">Case Study</a></li>
+                <li><a href="skills.html" class="active">Skills</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="skills-container">
+        <a href="index.html" class="back-link">← Back to Portfolio</a>
+
+        <h1>Technical Skills & Technologies</h1>
+        <p class="subtitle">Technologies and tools used in InfraPilot Enterprise and other projects</p>
+
+        <div class="skill-category">
+            <h2>Backend Development</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Go (Golang)</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li>Goroutines & channels for concurrency</li>
+                        <li>Gin framework for REST APIs</li>
+                        <li>WebSocket with Gorilla</li>
+                        <li>gRPC and Protocol Buffers</li>
+                        <li>Cross-compilation & build tags</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>PostgreSQL</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Complex query optimization</li>
+                        <li>Connection pooling (pgx)</li>
+                        <li>JSON/JSONB for flexible schemas</li>
+                        <li>Time-series data patterns</li>
+                        <li>Bulk inserts with COPY</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Redis</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Caching strategies (write-through, TTL)</li>
+                        <li>Redis Streams for event bus</li>
+                        <li>Pub/Sub for WebSocket broadcast</li>
+                        <li>Worker queue implementation</li>
+                        <li>Session management</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>API Design</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li>REST API design principles</li>
+                        <li>JWT authentication & RBAC</li>
+                        <li>Rate limiting & request throttling</li>
+                        <li>API versioning</li>
+                        <li>OpenAPI/Swagger documentation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="skill-category">
+            <h2>Frontend Development</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>React</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li> hooks & Context API</li>
+                        <li>Component architecture</li>
+                        <li>State management patterns</li>
+                        <li>React Router for SPA</li>
+                        <li>Performance optimization</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>JavaScript / TypeScript</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>ES6+ features (async/await, modules)</li>
+                        <li>TypeScript for type safety</li>
+                        <li>DOM manipulation & events</li>
+                        <li>Fetch API & Axios</li>
+                        <li>WebSocket client implementation</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Real-Time Systems</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>WebSocket protocol</li>
+                        <li>Event-driven architecture</li>
+                        <li>Live data visualization</li>
+                        <li>Connection management</li>
+                        <li>Backpressure handling</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>xterm.js & Terminal UI</h3>
+                    <span class="skill-level">Intermediate</span>
+                    <ul>
+                        <li>Web-based terminal emulation</li>
+                        <li>PTY (pseudo-terminal) integration</li>
+                        <li>Terminal session management</li>
+                        <li>Command execution & streaming</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="skill-category">
+            <h2>DevOps & Infrastructure</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Docker & Containers</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Multi-stage builds</li>
+                        <li>Docker Compose orchestration</li>
+                        <li>Container optimization</li>
+                        <li>Docker Engine API</li>
+                        <li>Image security scanning (Trivy)</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Kubernetes</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Deployments, Services, Ingress</li>
+                        <li>ConfigMaps & Secrets</li>
+                        <li>PersistentVolumes & StorageClasses</li>
+                        <li>client-go for K8s API</li>
+                        <li>Helm charts</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>CI/CD</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li>GitHub Actions workflows</li>
+                        <li>Automated testing pipelines</li>
+                        <li>Multi-platform builds</li>
+                        <li>Security scanning integration</li>
+                        <li>Automated deployments</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Cloud Platforms</h3>
+                    <span class="skill-level">Intermediate</span>
+                    <ul>
+                        <li>AWS (EC2, EKS, RDS)</li>
+                        <li>Google Cloud Platform</li>
+                        <li>Azure (basic)</li>
+                        <li>VPS deployment (DigitalOcean, Linode)</li>
+                        <li>Cloud-init & Terraform</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="skill-category">
+            <h2>Observability & Monitoring</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Prometheus & Grafana</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Custom metrics exposition</li>
+                        <li>Grafana dashboard design</li>
+                        <li>Alert rule configuration</li>
+                        <li>PromQL queries</li>
+                        <li>Service discovery</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>OpenTelemetry</h3>
+                    <span class="skill-level">Intermediate</span>
+                    <ul>
+                        <li>Distributed tracing</li>
+                        <li>Metrics collection</li>
+                        <li>Jaeger integration</li>
+                        <li>Trace context propagation</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Logging</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Structured logging (JSON)</li>
+                        <li>Log aggregation patterns</li>
+                        <li>Log rotation & retention</li>
+                        <li>ELK stack (basic)</li>
+                        <li>Audit trail implementation</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Alerting</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Threshold-based alerting</li>
+                        <li>Alert correlation & deduplication</li>
+                        <li>Severity classification</li>
+                        <li>Multi-channel notifications</li>
+                        <li>Alert lifecycle management</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="skill-category">
+            <h2>System Design & Architecture</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Event-Driven Architecture</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li>Event bus implementation</li>
+                        <li>Pub/Sub patterns</li>
+                        <li>Message queuing (Redis Streams)</li>
+                        <li>CQRS basics</li>
+                        <li>Decoupled microservices</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Scalability & Performance</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Horizontal scaling patterns</li>
+                        <li>Worker pools & load balancing</li>
+                        <li>Database optimization</li>
+                        <li>Caching strategies</li>
+                        <li>Connection pooling</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Security</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>JWT & OAuth2</li>
+                        <li>RBAC implementation</li>
+                        <li>Password hashing (bcrypt)</li>
+                        <li>Rate limiting</li>
+                        <li>Audit logging</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Testing</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Unit testing (Go, Jest)</li>
+                        <li>Integration testing</li>
+                        <li>Test coverage analysis</li>
+                        <li>Mocking & stubbing</li>
+                        <li>CI-integrated test suites</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="skill-category">
+            <h2>Tools & Platforms</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Version Control</h3>
+                    <span class="skill-level">Expert</span>
+                    <ul>
+                        <li>Git branching strategies</li>
+                        <li>GitHub workflows</li>
+                        <li>Conventional commits</li>
+                        <li>Pull request reviews</li>
+                        <li>Release management</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Linux & System Administration</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>Bash scripting</li>
+                        <li>Systemd service management</li>
+                        <li>Network configuration</li>
+                        <li>Package management (apt, yum)</li>
+                        <li>Log analysis & troubleshooting</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Nginx</h3>
+                    <span class="skill-level">Intermediate</span>
+                    <ul>
+                        <li>Reverse proxy configuration</li>
+                        <li>SSL/TLS termination</li>
+                        <li>Load balancing</li>
+                        <li>Rate limiting</li>
+                        <li>WebSocket proxying</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <h3>Databases & ORMs</h3>
+                    <span class="skill-level">Advanced</span>
+                    <ul>
+                        <li>PostgreSQL (primary)</li>
+                        <li>Redis (cache & queue)</li>
+                        <li>GORM (Go ORM)</li>
+                        <li>Database migrations</li>
+                        <li>Schema design</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="certification-box">
+            <h4>🎓 Continuous Learning</h4>
+            <p>Actively learning and staying updated with cloud-native technologies, Kubernetes operators, advanced networking, and platform engineering practices. Currently exploring eBPF, service meshes (Istio/Linkerd), and GitOps workflows with ArgoCD.</p>
+        </div>
+    </div>
+
+    <footer class="footer" style="margin-top: 60px; padding: 30px 0; background: #1a1a2e; color: white; text-align: center;">
+        <p> 2025 InfraPilot Enterprise. Built by Venkaiah Swami.</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/venkaiswami/infrapilot-enterprise" style="color: #0066cc;">GitHub</a> |
+            <a href="https://linkedin.com/in/venkaiswami" style="color: #0066cc;">LinkedIn</a> |
+            <a href="mailto:venkaiswami@pm.me" style="color: #0066cc;">Email</a>
+        </p>
+    </footer>
+</body>
+</html>

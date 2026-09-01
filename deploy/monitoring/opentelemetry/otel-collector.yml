@@ -1,0 +1,177 @@
+# OpenTelemetry Collector Configuration
+# Reference: https://opentelemetry.io/docs/collector/configuration/
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  prometheus:
+    scrape_interval: 15s
+
+receivers:
+  # OpenTelemetry Protocol (OTLP) receiver
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        tls:
+          cert_file: /etc/otel/tls/server.crt
+          key_file: /etc/otel/tls/server.key
+      http:
+        endpoint: 0.0.0.0:4318
+        tls:
+          cert_file: /etc/otel/tls/server.crt
+          key_file: /etc/otel/tls/server.key
+
+  # Prometheus receiver (scrape metrics)
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'infrapilot-backend'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['backend:8080']
+              labels:
+                service: 'backend'
+                environment: 'production'
+
+        - job_name: 'node-exporter'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['node-exporter:9100']
+              labels:
+                service: 'node'
+                environment: 'production'
+
+        - job_name: 'cadvisor'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['cadvisor:8080']
+              labels:
+                service: 'containers'
+                environment: 'production'
+
+  # Jaeger receiver (for trace collection)
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:14250
+      thrift_http:
+        endpoint: 0.0.0.0:14268
+      thrift_compact:
+        endpoint: 0.0.0.0:6831
+      thrift_binary:
+        endpoint: 0.0.0.0:6832
+
+  # Zipkin receiver (for compatibility)
+  zipkin:
+    endpoint: 0.0.0.0:9411
+
+  # Debug exporter (for local development)
+  debug:
+    verbosity: detailed
+
+processors:
+  # Batch processor for efficient export
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Resource processor for adding metadata
+  resource:
+    attributes:
+      - key: service.name
+        value: infrapilot-enterprise
+        action: upsert
+      - key: service.namespace
+        value: infrapilot
+        action: upsert
+      - key: deployment.environment
+        value: production
+        action: upsert
+      - key: cluster
+        value: infrapilot-enterprise
+        action: upsert
+
+  # Span processor for trace processing
+  span:
+    name:
+      url_remove_all_keys: true
+      max_length: 1024
+
+  # Metric processor for transformations
+  metricstransform:
+    transforms:
+      - include: ^http\.request\.duration$
+        action: update
+        operations:
+          - action: scale
+            scalar: 1000.0
+
+exporters:
+  # Prometheus exporter
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: infrapilot
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # Jaeger exporter
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+  # Loki exporter for logs
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    tenant_id: infrapilot
+    labels:
+      attributes:
+        service.name: service
+        deployment.environment: environment
+
+  # OTLP exporter (for external services)
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  extensions: [health_check, prometheus]
+
+  # Pipelines for different signal types
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp, jaeger, zipkin]
+      processors: [memory_limiter, batch, resource, span]
+      exporters: [jaeger, otlp]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [loki]
+
+# Telemetry configuration for the collector itself
+telemetry:
+  logs:
+    level: info
+    format: json
+  metrics:
+    level: detailed
+    address: 0.0.0.0:8888

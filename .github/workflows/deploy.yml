@@ -1,0 +1,151 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker, security]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: 'v3.14.0'
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v4
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      if: github.ref == 'refs/heads/main'
+
+    - name: Configure kubectl (develop)
+      uses: azure/k8s-set-context@v4
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      if: github.ref == 'refs/heads/develop'
+
+    - name: Determine environment
+      id: env
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "environment=production" >> $GITHUB_OUTPUT
+          echo "namespace=infrapilot" >> $GITHUB_OUTPUT
+          echo "values-file=helm/infrapilot/values-prod.yaml" >> $GITHUB_OUTPUT
+        elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          echo "environment=staging" >> $GITHUB_OUTPUT
+          echo "namespace=infrapilot-staging" >> $GITHUB_OUTPUT
+          echo "values-file=helm/infrapilot/values-stage.yaml" >> $GITHUB_OUTPUT
+        else
+          echo "environment=development" >> $GITHUB_OUTPUT
+          echo "namespace=infrapilot-dev" >> $GITHUB_OUTPUT
+          echo "values-file=helm/infrapilot/values-dev.yaml" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - name: Run database migrations
+      run: |
+        echo "Running database migrations..."
+        kubectl exec -n ${{ steps.env.outputs.namespace }} -it deployment/infrapilot-backend -- \
+          go run cmd/migrate/main.go || \
+          kubectl run migration-job --image=ghcr.io/${{ github.repository }}/backend:${{ github.sha }} \
+            --namespace=${{ steps.env.outputs.namespace }} \
+            --rm -i --restart=Never -- \
+            go run cmd/migrate/main.go
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+      continue-on-error: false
+      timeout-minutes: 10
+
+    - name: Deploy with Helm (Production)
+      if: github.ref == 'refs/heads/main'
+      run: |
+        helm upgrade --install infrapilot ./helm/infrapilot \
+          --namespace ${{ steps.env.outputs.namespace }} \
+          --values ${{ steps.env.outputs.values-file }} \
+          --set image.tag=${{ github.sha }} \
+          --set image.backend=ghcr.io/${{ github.repository }}/backend:${{ github.sha }} \
+          --set image.frontend=ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} \
+          --set image.agent=ghcr.io/${{ github.repository }}/agent:${{ github.sha }} \
+          --timeout 5m \
+          --wait
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+
+    - name: Deploy with Helm (Staging)
+      if: github.ref == 'refs/heads/develop'
+      run: |
+        helm upgrade --install infrapilot ./helm/infrapilot \
+          --namespace ${{ steps.env.outputs.namespace }} \
+          --values ${{ steps.env.outputs.values-file }} \
+          --set image.tag=${{ github.sha }} \
+          --set image.backend=ghcr.io/${{ github.repository }}/backend:${{ github.sha }} \
+          --set image.frontend=ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} \
+          --set image.agent=ghcr.io/${{ github.repository }}/agent:${{ github.sha }} \
+          --timeout 5m \
+          --wait
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+
+    - name: Verify backend rollout status
+      run: |
+        kubectl rollout status deployment/infrapilot-backend \
+          -n ${{ steps.env.outputs.namespace }} \
+          --timeout=300s
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+
+    - name: Verify frontend rollout status
+      run: |
+        kubectl rollout status deployment/infrapilot-frontend \
+          -n ${{ steps.env.outputs.namespace }} \
+          --timeout=300s
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+
+    - name: Health check backend
+      run: |
+        kubectl port-forward svc/infrapilot-backend 8080:8080 -n ${{ steps.env.outputs.namespace }} &
+        sleep 10
+        curl -f http://localhost:8080/api/v1/healthz || exit 1
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+      timeout-minutes: 5
+
+    - name: Health check frontend
+      run: |
+        kubectl port-forward svc/infrapilot-frontend 80:80 -n ${{ steps.env.outputs.namespace }} &
+        sleep 10
+        curl -f http://localhost:80/healthz || exit 1
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+      timeout-minutes: 5
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "Deployment failed, initiating rollback..."
+        helm rollback infrapilot ${{ steps.env.outputs.namespace }} || true
+      env:
+        NAMESPACE: ${{ steps.env.outputs.namespace }}
+
+    - name: Display deployment info
+      if: success()
+      run: |
+        echo "Deployment successful!"
+        echo "Environment: ${{ steps.env.outputs.environment }}"
+        echo "Namespace: ${{ steps.env.outputs.namespace }}"
+        kubectl get pods -n ${{ steps.env.outputs.namespace }}
+        kubectl get services -n ${{ steps.env.outputs.namespace }}
+        kubectl get ingress -n ${{ steps.env.outputs.namespace }}

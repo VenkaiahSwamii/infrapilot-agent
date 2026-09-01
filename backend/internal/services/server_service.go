@@ -1,0 +1,388 @@
+package services
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"strings"
+	"time"
+
+	"infrapilot/backend/internal/database"
+	"infrapilot/backend/internal/events"
+	"infrapilot/backend/internal/models"
+	"infrapilot/backend/internal/repository"
+	"infrapilot/backend/internal/websocket"
+
+	"github.com/google/uuid"
+)
+
+var eventBusGlobal *events.EventBus
+
+type ServerService struct {
+	serverRepo *repository.ServerRepository
+	metricRepo *repository.MetricRepository
+	hub        *websocket.Hub
+}
+
+type RegisterServerInput struct {
+	ID             uuid.UUID
+	Hostname       string
+	OS             string
+	Platform       string
+	IPAddress      string
+	AgentVersion   string
+	ResourceType   string
+	Organization   string
+	Kernel         string
+	Architecture   string
+	MACAddress     string
+	CPUModel       string
+	TotalMemoryGB  uint64
+	TotalDiskGB    uint64
+	GPU            string
+	Virtualization string
+	CloudProvider  string
+}
+
+func NewServerService(serverRepo *repository.ServerRepository, metricRepo *repository.MetricRepository, hub *websocket.Hub, bus *events.EventBus) *ServerService {
+	svc := &ServerService{
+		serverRepo: serverRepo,
+		metricRepo: metricRepo,
+		hub:        hub,
+	}
+	if bus != nil {
+		eventBusGlobal = bus
+	}
+	return svc
+}
+
+func (s *ServerService) broadcastStatusUpdate(m *models.Server) {
+	payload := map[string]interface{}{
+		"machine_id":    m.ID,
+		"hostname":      m.Hostname,
+		"status":        m.Status,
+		"ip_address":    m.IPAddress,
+		"os":            m.OS,
+		"platform":      m.Platform,
+		"agent_version": m.AgentVersion,
+		"resource_type": m.ResourceType,
+		"organization":  m.Organization,
+		"last_seen":     m.LastSeen,
+	}
+
+	// Publish structured events
+	if m.Status == "ONLINE" {
+		websocket.PublishEvent("server.online", m.ID.String(), payload)
+	} else if m.Status == "OFFLINE" {
+		websocket.PublishEvent("server.offline", m.ID.String(), payload)
+	}
+	websocket.PublishEvent("heartbeat.received", m.ID.String(), map[string]interface{}{
+		"server_id": m.ID.String(),
+		"timestamp": m.LastSeen,
+	})
+
+	jsonData, _ := json.Marshal(payload)
+	s.hub.Broadcast(jsonData)
+}
+
+func (s *ServerService) PublishEvent(e events.Event) {
+	if eventBusGlobal != nil {
+		eventBusGlobal.Publish(e)
+	}
+}
+
+func (s *ServerService) RegisterOrUpdateServer(input RegisterServerInput) (*models.Server, error) {
+	server, err := s.serverRepo.GetServer(input.ID)
+	if err == nil && server != nil {
+		// Update existing server record
+		applyServerRegistration(server, input)
+		server.Status = "ONLINE"
+		server.LastSeen = time.Now()
+
+		if err := s.serverRepo.UpdateServer(server); err != nil {
+			return nil, err
+		}
+
+		s.broadcastStatusUpdate(server)
+		return server, nil
+	}
+
+	// Create new server registry record
+	apiKey := generateServerAPIKey()
+	server = &models.Server{
+		ID:        input.ID,
+		APIKey:    apiKey,
+		Status:    "ONLINE",
+		LastSeen:  time.Now(),
+		CreatedAt: time.Now(),
+	}
+	applyServerRegistration(server, input)
+
+	if err := s.serverRepo.CreateServer(server); err != nil {
+		return nil, err
+	}
+
+	s.broadcastStatusUpdate(server)
+	s.PublishEvent(events.MachineRegisteredEvent{
+		MachineID: server.ID.String(),
+		Hostname:  server.Hostname,
+		IPAddress: server.IPAddress,
+		OS:        server.OS,
+		Platform:  server.Platform,
+		APIKey:    server.APIKey,
+		Time:      time.Now(),
+	})
+	return server, nil
+}
+
+func applyServerRegistration(server *models.Server, input RegisterServerInput) {
+	server.Hostname = input.Hostname
+	server.OS = input.OS
+	server.Platform = input.Platform
+	server.IPAddress = input.IPAddress
+	server.AgentVersion = input.AgentVersion
+	server.ResourceType = normalizeServerResourceType(input.ResourceType, input.OS, input.Platform, input.Virtualization, input.CloudProvider)
+	server.Organization = defaultServerString(input.Organization, "Default Organization")
+	server.Kernel = input.Kernel
+	server.Architecture = input.Architecture
+	server.MACAddress = input.MACAddress
+	server.CPUModel = input.CPUModel
+	server.TotalMemoryGB = input.TotalMemoryGB
+	server.TotalDiskGB = input.TotalDiskGB
+	server.GPU = input.GPU
+	server.Virtualization = input.Virtualization
+	server.CloudProvider = input.CloudProvider
+}
+
+func normalizeServerResourceType(resourceType, osName, platform, virtualization, cloudProvider string) string {
+	value := strings.ToLower(strings.TrimSpace(resourceType))
+	if value != "" {
+		return strings.ReplaceAll(value, " ", "_")
+	}
+
+	haystack := strings.ToLower(strings.Join([]string{osName, platform, virtualization, cloudProvider}, " "))
+	switch {
+	case strings.Contains(haystack, "kubernetes") || strings.Contains(haystack, "k8s"):
+		return "kubernetes"
+	case strings.Contains(haystack, "docker"):
+		return "docker"
+	case strings.Contains(haystack, "vmware") || strings.Contains(haystack, "esxi"):
+		return "vmware"
+	case strings.Contains(haystack, "hyper-v") || strings.Contains(haystack, "virtual"):
+		return "virtual_machine"
+	case strings.Contains(haystack, "aws") || strings.Contains(haystack, "azure") || strings.Contains(haystack, "gcp") || strings.Contains(haystack, "google cloud"):
+		return "cloud"
+	case strings.Contains(haystack, "nas") || strings.Contains(haystack, "san") || strings.Contains(haystack, "nfs") || strings.Contains(haystack, "ceph") || strings.Contains(haystack, "raid"):
+		return "storage"
+	case strings.Contains(haystack, "postgres") || strings.Contains(haystack, "mysql") || strings.Contains(haystack, "mongo") || strings.Contains(haystack, "redis"):
+		return "database"
+	case strings.Contains(haystack, "linux") || strings.Contains(haystack, "ubuntu") || strings.Contains(haystack, "debian") || strings.Contains(haystack, "centos") || strings.Contains(haystack, "rocky") || strings.Contains(haystack, "redhat") || strings.Contains(haystack, "amazon linux"):
+		return "linux"
+	case strings.Contains(haystack, "windows"):
+		return "windows"
+	default:
+		return "server"
+	}
+}
+
+func defaultServerString(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return value
+}
+
+func (s *ServerService) RegisterServer(hostname, ipAddress, os, agentVersion string) (*models.Server, error) {
+	serverID := uuid.New()
+	apiKey := generateServerAPIKey()
+
+	server := &models.Server{
+		ID:           serverID,
+		Hostname:     hostname,
+		IPAddress:    ipAddress,
+		OS:           os,
+		AgentVersion: agentVersion,
+		APIKey:       apiKey,
+		Status:       "OFFLINE",
+		LastSeen:     time.Now(),
+		CreatedAt:    time.Now(),
+	}
+
+	if err := s.serverRepo.CreateServer(server); err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
+func (s *ServerService) Heartbeat(id uuid.UUID) error {
+	server, err := s.serverRepo.GetServer(id)
+	if err != nil || server == nil {
+		if database.DB == nil {
+			return nil
+		}
+		return errors.New("server not found")
+	}
+
+	server.LastSeen = time.Now().UTC()
+	server.Status = "ONLINE"
+	server.Online = true
+	if err := s.serverRepo.UpdateServer(server); err != nil {
+		return err
+	}
+
+	s.broadcastStatusUpdate(server)
+	s.PublishEvent(events.MachineOnlineEvent{
+		MachineID: server.ID.String(),
+		Hostname:  server.Hostname,
+		IPAddress: server.IPAddress,
+		OS:        server.OS,
+		Platform:  server.Platform,
+		LastSeen:  server.LastSeen,
+		Time:      time.Now(),
+	})
+
+	return nil
+}
+
+type serverWithMetrics struct {
+	models.Server
+	CPUUsage       float64
+	MemoryUsage    float64
+	DiskUsage      float64
+	UploadMbps     float64
+	DownloadMbps   float64
+	Uptime         uint64
+	CPUTemperature float64
+	CPUCores       int
+}
+
+func (s *ServerService) GetServers() ([]models.ServerSnapshot, error) {
+	if database.DB == nil {
+		return []models.ServerSnapshot{}, nil
+	}
+	var rows []serverWithMetrics
+	if err := database.DB.Raw(`
+SELECT
+m.*,
+mt.cpu_usage,
+mt.memory_usage,
+mt.disk_usage,
+mt.upload_mbps,
+mt.download_mbps,
+mt.uptime,
+mt.cpu_temperature,
+mt.cpu_cores
+FROM servers m
+LEFT JOIN LATERAL (
+    SELECT *
+    FROM metrics
+    WHERE metrics.machine_id = m.id
+    ORDER BY created_at DESC
+    LIMIT 1
+) mt ON TRUE;
+`).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]models.ServerSnapshot, 0, len(rows))
+	for _, row := range rows {
+		metric := models.Metric{
+			MachineID:      row.ID,
+			CPUUsage:       row.CPUUsage,
+			MemoryUsage:    row.MemoryUsage,
+			DiskUsage:      row.DiskUsage,
+			UploadMbps:     row.UploadMbps,
+			DownloadMbps:   row.DownloadMbps,
+			Uptime:         row.Uptime,
+			CPUTemperature: row.CPUTemperature,
+			CPUCores:       row.CPUCores,
+			CreatedAt:      time.Now(),
+		}
+		snapshot := buildServerSnapshot(row.Server, metric, models.LinuxMetric{})
+		result = append(result, snapshot)
+	}
+	return result, nil
+}
+
+func (s *ServerService) GetServerSnapshotByID(id uuid.UUID) (*models.ServerSnapshot, error) {
+	server, err := s.serverRepo.GetServer(id)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := s.metricRepo.FindLatestByMachineIDs([]uuid.UUID{id})
+	if err != nil {
+		return nil, err
+	}
+	rich, err := s.metricRepo.FindLatestRichByMachineIDs([]uuid.UUID{id})
+	if err != nil {
+		return nil, err
+	}
+	snapshot := buildServerSnapshot(*server, latest[id], rich[id])
+	return &snapshot, nil
+}
+
+func buildServerSnapshot(server models.Server, metric models.Metric, rich models.LinuxMetric) models.ServerSnapshot {
+	snapshot := models.ServerSnapshot{Server: server}
+	if metric.ID == uuid.Nil {
+		return snapshot
+	}
+	metricAt := metric.CreatedAt
+	network := metric.UploadMbps + metric.DownloadMbps
+	snapshot.CPUUsage = &metric.CPUUsage
+	snapshot.MemoryUsage = &metric.MemoryUsage
+	snapshot.DiskUsage = &metric.DiskUsage
+	snapshot.StorageUsage = &metric.DiskUsage
+	snapshot.UploadMbps = &metric.UploadMbps
+	snapshot.DownloadMbps = &metric.DownloadMbps
+	snapshot.NetworkMbps = &network
+	snapshot.Uptime = &metric.Uptime
+	snapshot.MetricAt = &metricAt
+	snapshot.CPUTemperature = &metric.CPUTemperature
+	snapshot.CPUCores = &metric.CPUCores
+	if rich.ID != uuid.Nil {
+		snapshot.CPUFrequencyMHz = &rich.CPUFrequencyMHz
+		snapshot.DiskReadBps = &rich.DiskReadBps
+		snapshot.DiskWriteBps = &rich.DiskWriteBps
+		snapshot.DiskIOPS = &rich.DiskIOPS
+	}
+	return snapshot
+}
+
+func (s *ServerService) GetServerByID(id uuid.UUID) (*models.Server, error) {
+	return s.serverRepo.GetServer(id)
+}
+
+func (s *ServerService) GetServerByIDOrHostname(identifier string) (*models.Server, error) {
+	return s.serverRepo.GetServerByIDOrHostname(identifier)
+}
+
+func (s *ServerService) GetServerSnapshotByIDOrHostname(identifier string) (*models.ServerSnapshot, error) {
+	server, err := s.serverRepo.GetServerByIDOrHostname(identifier)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := s.metricRepo.FindLatestByMachineIDs([]uuid.UUID{server.ID})
+	if err != nil {
+		return nil, err
+	}
+	rich, err := s.metricRepo.FindLatestRichByMachineIDs([]uuid.UUID{server.ID})
+	if err != nil {
+		return nil, err
+	}
+	snapshot := buildServerSnapshot(*server, latest[server.ID], rich[server.ID])
+	return &snapshot, nil
+}
+
+func (s *ServerService) Save(server *models.Server) error {
+	return s.serverRepo.UpdateServer(server)
+}
+
+func generateServerAPIKey() string {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "ip_live_" + uuid.New().String()
+	}
+	return "ip_live_" + hex.EncodeToString(bytes)
+}

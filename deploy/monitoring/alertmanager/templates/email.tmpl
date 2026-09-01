@@ -1,0 +1,197 @@
+{{ define "email.default.html" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .container { padding: 20px; }
+    .header { background: #2196F3; color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .alert { border-left: 4px solid #ff9800; padding: 15px; margin: 10px 0; background: #f5f5f5; }
+    .critical { border-left-color: #f44336; background: #ffebee; }
+    .warning { border-left-color: #ff9800; background: #fff3e0; }
+    .info { border-left-color: #2196F3; background: #e3f2fd; }
+    .label { font-weight: bold; display: inline-block; width: 150px; }
+    .action { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>InfraPilot Monitoring Alert</h1>
+    </div>
+    <div class="content">
+      <div class="alert {{ .CommonLabels.severity }}">
+        <h2>{{ .CommonLabels.alertname }}</h2>
+        <p><span class="label">Status:</span> {{ .Status }}</p>
+        <p><span class="label">Severity:</span> {{ .CommonLabels.severity }}</p>
+        <p><span class="label">Service:</span> {{ .CommonLabels.service }}</p>
+        <p><span class="label">Cluster:</span> {{ .ExternalLabels.cluster }}</p>
+        <p><span class="label">Started At:</span> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+        {{ if .EndsAt }}
+        <p><span class="label">Ended At:</span> {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+        {{ end }}
+        <p><span class="label">Description:</span> {{ .CommonAnnotations.description }}</p>
+        {{ if .CommonAnnotations.hostname }}
+        <p><span class="label">Hostname:</span> {{ .CommonAnnotations.hostname }}</p>
+        {{ end }}
+        {{ if .CommonAnnotations.metric }}
+        <p><span class="label">Metric:</span> {{ .CommonAnnotations.metric }}</p>
+        {{ end }}
+        {{ if .CommonAnnotations.value }}
+        <p><span class="label">Value:</span> {{ .CommonAnnotations.value }}</p>
+        {{ end }}
+        {{ if .CommonAnnotations.suggested_action }}
+        <div class="action">
+          <h3>Suggested Action:</h3>
+          <p>{{ .CommonAnnotations.suggested_action }}</p>
+        </div>
+        {{ end }}
+        <p><a href="https://infrapilot.yourdomain.com/alerts">View in Dashboard</a></p>
+      </div>
+    </div>
+    <div style="padding: 20px; color: #666; font-size: 12px;">
+      <p>InfraPilot Enterprise Observability Stack</p>
+      <p>Environment: {{ .ExternalLabels.environment }}</p>
+    </div>
+  </div>
+</body>
+</html>
+{{ end }}
+
+{{ define "email.critical" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #ffebee; }
+    .container { padding: 20px; max-width: 800px; margin: 0 auto; }
+    .header { background: #d32f2f; color: white; padding: 30px; text-align: center; }
+    .alert { border: 2px solid #d32f2f; padding: 20px; margin: 20px 0; background: white; border-radius: 4px; }
+    .label { font-weight: bold; display: inline-block; width: 150px; }
+    .action { background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔴 CRITICAL ALERT</h1>
+      <h2>{{ .CommonLabels.alertname }}</h2>
+    </div>
+    <div class="alert">
+      <p><span class="label">Status:</span> {{ .Status }}</p>
+      <p><span class="label">Severity:</span> {{ .CommonLabels.severity }}</p>
+      <p><span class="label">Service:</span> {{ .CommonLabels.service }}</p>
+      <p><span class="label">Hostname:</span> {{ .CommonAnnotations.hostname }}</p>
+      <p><span class="label">Started At:</span> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+      <p><span class="label">Description:</span> {{ .CommonAnnotations.description }}</p>
+      {{ if .CommonAnnotations.suggested_action }}
+      <div class="action">
+        <h3>⚠️ Immediate Action Required:</h3>
+        <p>{{ .CommonAnnotations.suggested_action }}</p>
+      </div>
+      {{ end }}
+      <p><a href="https://infrapilot.yourdomain.com/alerts" style="display: inline-block; padding: 10px 20px; background: #d32f2f; color: white; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Dashboard</a></p>
+    </div>
+    <div class="footer">
+      <p>InfraPilot Enterprise Observability Stack</p>
+      <p>Cluster: {{ .ExternalLabels.cluster }} | Environment: {{ .ExternalLabels.environment }}</p>
+    </div>
+  </div>
+</body>
+</html>
+{{ end }}
+
+{{ define "email.warning" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff3e0; }
+    .container { padding: 20px; max-width: 800px; margin: 0 auto; }
+    .header { background: #ff9800; color: white; padding: 30px; text-align: center; }
+    .alert { border: 2px solid #ff9800; padding: 20px; margin: 20px 0; background: white; border-radius: 4px; }
+    .label { font-weight: bold; display: inline-block; width: 150px; }
+    .action { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 15px 0; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚠️ WARNING</h1>
+      <h2>{{ .CommonLabels.alertname }}</h2>
+    </div>
+    <div class="alert">
+      <p><span class="label">Status:</span> {{ .Status }}</p>
+      <p><span class="label">Severity:</span> {{ .CommonLabels.severity }}</p>
+      <p><span class="label">Service:</span> {{ .CommonLabels.service }}</p>
+      <p><span class="label">Hostname:</span> {{ .CommonAnnotations.hostname }}</p>
+      <p><span class="label">Metric:</span> {{ .CommonAnnotations.metric }}</p>
+      <p><span class="label">Value:</span> {{ .CommonAnnotations.value }}</p>
+      <p><span class="label">Started At:</span> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+      <p><span class="label">Description:</span> {{ .CommonAnnotations.description }}</p>
+      {{ if .CommonAnnotations.suggested_action }}
+      <div class="action">
+        <h3>Suggested Action:</h3>
+        <p>{{ .CommonAnnotations.suggested_action }}</p>
+      </div>
+      {{ end }}
+      <p><a href="https://infrapilot.yourdomain.com/alerts" style="display: inline-block; padding: 10px 20px; background: #ff9800; color: white; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Dashboard</a></p>
+    </div>
+    <div class="footer">
+      <p>InfraPilot Enterprise Observability Stack</p>
+      <p>Cluster: {{ .ExternalLabels.cluster }} | Environment: {{ .ExternalLabels.environment }}</p>
+    </div>
+  </div>
+</body>
+</html>
+{{ end }}
+
+{{ define "email.info" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .container { padding: 20px; max-width: 800px; margin: 0 auto; }
+    .header { background: #2196F3; color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ℹ️ INFO</h1>
+      <h2>{{ .CommonLabels.alertname }}</h2>
+    </div>
+    <div class="content">
+      <p><strong>Status:</strong> {{ .Status }}</p>
+      <p><strong>Started At:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+      <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+      <p><a href="https://infrapilot.yourdomain.com/alerts">View in Dashboard</a></p>
+    </div>
+    <div class="footer">
+      <p>InfraPilot Enterprise Observability Stack</p>
+      <p>Cluster: {{ .ExternalLabels.cluster }} | Environment: {{ .ExternalLabels.environment }}</p>
+    </div>
+  </div>
+</body>
+</html>
+{{ end }}
+
+{{ define "slack.text" }}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }}] {{ .CommonLabels.alertname }}
+
+Severity: {{ .CommonLabels.severity }}
+Service: {{ .CommonLabels.service }}
+{{ if .CommonAnnotations.hostname }}Host: {{ .CommonAnnotations.hostname }}
+{{ end }}{{ if .CommonAnnotations.description }}
+Description: {{ .CommonAnnotations.description }}
+{{ end }}{{ if .CommonAnnotations.suggested_action }}
+Action: {{ .CommonAnnotations.suggested_action }}
+{{ end }}
+Dashboard: https://infrapilot.yourdomain.com
+{{ end }}

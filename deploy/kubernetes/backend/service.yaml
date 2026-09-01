@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infrapilot-backend
+  namespace: infrapilot
+  labels:
+    app: infrapilot-backend
+    tier: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: infrapilot-backend

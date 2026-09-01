@@ -1,0 +1,57 @@
+# InfraPilot Community - Issue Labeler Configuration
+# https://github.com/actions/labeler
+
+# Sprint 5: Community Contribution Labels
+'good first issue':
+  - any:
+      - 'CONTRIBUTING.md'
+      - 'docs/CONTRIBUTING.md'
+
+'help wanted':
+  - any:
+      - 'docs/**/*'
+      - 'README.md'
+      - 'website/**/*'
+
+'documentation':
+  - any:
+      - 'docs/**/*'
+      - '**/*.md'
+      - 'website/**/*'
+
+'bug':
+  - any:
+      - 'backend/**/*.go'
+      - 'agent/**/*.go'
+      - 'frontend/**/*.{js,jsx}'
+
+'enhancement':
+  - changed-files-any:
+      - pattern: '**/*.{go,js,jsx}'
+
+'plugin':
+  - changed-files-any:
+      - pattern: 'agent/internal/plugins/**'
+
+'security':
+  - changed-files-any:
+      - pattern: 'backend/internal/**/*security*.go'
+
+'infrastructure':
+  - any:
+      - 'docker-compose*.yml'
+      - 'Dockerfile*'
+      - 'k8s/*'
+      - 'scripts/*'
+
+'ci/cd':
+  - any:
+      - '.github/workflows/*'
+      - '.goreleaser.*'
+      - 'Makefile'
+
+'testing':
+  - changed-files-any:
+      - pattern: '**/*_test.go'
+      - pattern: '**/*.test.js'
+      - pattern: '**/*.test.jsx'

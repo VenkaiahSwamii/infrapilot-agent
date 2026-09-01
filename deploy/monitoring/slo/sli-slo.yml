@@ -1,0 +1,262 @@
+# Service Level Indicators (SLIs) and Service Level Objectives (SLOs)
+# Reference: https://sre.google/sre-book/service-level-objectives/
+
+service_levels:
+  infrapilot:
+    # Service Level Indicators
+    slis:
+      # API Availability SLI
+      - name: api_availability
+        description: "Percentage of successful API requests"
+        query: |
+          sum(rate(http_requests_total{status=~"2.."}[5m])) 
+          / 
+          sum(rate(http_requests_total[5m])) * 100
+        unit: "percent"
+        target: 99.9
+
+      # API Latency SLI
+      - name: api_latency
+        description: "95th percentile API response time"
+        query: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket[5m])
+          )
+        unit: "seconds"
+        target: 0.5
+
+      # Agent Uptime SLI
+      - name: agent_uptime
+        description: "Percentage of agents sending heartbeats"
+        query: |
+          count(agent_last_heartbeat_timestamp > (time() - 30)) 
+          / 
+          count(agent_status) * 100
+        unit: "percent"
+        target: 99.5
+
+      # Heartbeat Success Rate SLI
+      - name: heartbeat_success_rate
+        description: "Percentage of successful heartbeats"
+        query: |
+          sum(rate(heartbeat_total{status="success"}[5m])) 
+          / 
+          sum(rate(heartbeat_total[5m])) * 100
+        unit: "percent"
+        target: 99.9
+
+      # Metrics Ingestion Rate SLI
+      - name: metrics_ingestion_rate
+        description: "Rate of metrics being ingested"
+        query: |
+          sum(rate(metrics_received_total[5m]))
+        unit: "metrics/second"
+        target: 1000
+
+      # Dashboard Response Time SLI
+      - name: dashboard_response_time
+        description: "95th percentile dashboard load time"
+        query: |
+          histogram_quantile(0.95,
+            rate(dashboard_request_duration_seconds_bucket[5m])
+          )
+        unit: "seconds"
+        target: 2.0
+
+      # Database Query Latency SLI
+      - name: database_query_latency
+        description: "95th percentile database query time"
+        query: |
+          histogram_quantile(0.95,
+            rate(db_query_duration_seconds_bucket[5m])
+          )
+        unit: "seconds"
+        target: 0.1
+
+      # WebSocket Connection Success SLI
+      - name: websocket_success_rate
+        description: "WebSocket connection success rate"
+        query: |
+          sum(rate(websocket_connections_total{status="connected"}[5m])) 
+          / 
+          sum(rate(websocket_connections_total[5m])) * 100
+        unit: "percent"
+        target: 99.5
+
+    # Service Level Objectives
+    slos:
+      # API SLO
+      - name: api_availability_slo
+        sli: api_availability
+        target: 99.9
+        window: 30d
+        description: "API must be available 99.9% of the time over 30 days"
+        alert:
+          - name: api_availability_budget_exhausted
+            expr: |
+              (
+                1 - (
+                  sum(rate(http_requests_total{status=~"2.."}[30d])) 
+                  / 
+                  sum(rate(http_requests_total[30d]))
+                )
+              ) > 0.001
+            for: 5m
+            labels:
+              severity: critical
+              category: slo
+
+      # API Latency SLO
+      - name: api_latency_slo
+        sli: api_latency
+        target: 500  # 500ms
+        window: 7d
+        description: "95% of API requests must complete within 500ms"
+        alert:
+          - name: api_latency_slo_violation
+            expr: |
+              histogram_quantile(0.95, 
+                rate(http_request_duration_seconds_bucket[1h])
+              ) > 0.5
+            for: 5m
+            labels:
+              severity: warning
+              category: slo
+
+      # Dashboard Latency SLO
+      - name: dashboard_latency_slo
+        sli: dashboard_response_time
+        target: 2.0
+        window: 7d
+        description: "Dashboard must load within 2 seconds"
+        alert:
+          - name: dashboard_latency_slo_violation
+            expr: |
+              histogram_quantile(0.95,
+                rate(dashboard_request_duration_seconds_bucket[1h])
+              ) > 2.0
+            for: 5m
+            labels:
+              severity: warning
+              category: slo
+
+      # Metrics Ingestion Delay SLO
+      - name: metrics_ingestion_delay_slo
+        sli: metrics_ingestion_delay
+        target: 5
+        unit: "seconds"
+        window: 24h
+        description: "Metrics must be ingested within 5 seconds"
+        alert:
+          - name: metrics_ingestion_delay_exceeded
+            expr: |
+              time() - max(metrics_ingestion_timestamp) > 5
+            for: 2m
+            labels:
+              severity: warning
+              category: slo
+
+      # Agent Heartbeat Interval SLO
+      - name: agent_heartbeat_interval_slo
+        sli: agent_heartbeat_interval
+        target: 15
+        unit: "seconds"
+        window: 1h
+        description: "Agents must send heartbeats every 15 seconds"
+        alert:
+          - name: agent_heartbeat_interval_exceeded
+            expr: |
+              time() - max(agent_last_heartbeat_timestamp) > 20
+            for: 1m
+            labels:
+              severity: warning
+              category: slo
+
+      # Alert Delivery SLO
+      - name: alert_delivery_slo
+        sli: alert_delivery_time
+        target: 30
+        unit: "seconds"
+        window: 24h
+        description: "Alerts must be delivered within 30 seconds"
+        alert:
+          - name: alert_delivery_delay_exceeded
+            expr: |
+              time() - max(alert_fired_timestamp) > 30
+            for: 2m
+            labels:
+              severity: critical
+              category: slo
+
+      # Error Rate SLO
+      - name: error_rate_slo
+        sli: error_rate
+        target: 1
+        unit: "percent"
+        window: 7d
+        description: "Error rate must be below 1%"
+        alert:
+          - name: error_rate_slo_violation
+            expr: |
+              (sum(rate(http_requests_total{status=~"5.."}[1h])) 
+              / 
+              sum(rate(http_requests_total[1h]))) * 100 > 1
+            for: 5m
+            labels:
+              severity: warning
+              category: slo
+
+# Error Budget Policy
+error_budget_policy:
+  - threshold: 100
+    actions:
+      - Continue normal operations
+      - Monitor closely
+
+  - threshold: 50
+    actions:
+      - Review recent changes
+      - Prioritize reliability work
+      - Freeze non-critical deployments
+
+  - threshold: 0
+    actions:
+      - Halt all non-critical deployments
+      - Emergency response team activation
+      - Post-mortem required
+      - Focus entirely on reliability
+
+# SLO Compliance Tracking
+slo_compliance:
+  review_frequency: daily
+  report_recipients:
+    - platform-team@yourdomain.com
+    - management@yourdomain.com
+  
+  dashboards:
+    - sli_availability
+    - sli_latency
+    - error_budget_remaining
+    - slo_compliance_trend
+
+# Burn Rate Alerts
+burn_rate_alerts:
+  - name: fast_burn
+    expr: |
+      (
+        sum(rate(http_requests_total{status=~"5.."}[1h])) 
+        / 
+        sum(rate(http_requests_total[1h]))
+      ) > 0.01
+    for: 5m
+    severity: critical
+
+  - name: slow_burn
+    expr: |
+      (
+        sum(rate(http_requests_total{status=~"5.."}[6h])) 
+        / 
+        sum(rate(http_requests_total[6h]))
+      ) > 0.001
+    for: 30m
+    severity: warning

@@ -1,0 +1,230 @@
+{
+  "dashboard": {
+    "title": "Infrastructure Overview",
+    "uid": "infrastructure-overview",
+    "tags": ["infrastructure", "infrapilot"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Health Score",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "infrapilot_health_score",
+            "refId": "A",
+            "legendFormat": "Health Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 60, "color": "yellow" },
+                { "value": 80, "color": "green" }
+              ]
+            }
+          }
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        }
+      },
+      {
+        "id": 2,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "gridPos": { "x": 6, "y": 0, "w": 18, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Disk Usage",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(1 - (node_filesystem_avail_bytes{fstype=~\"ext4|xfs|btrfs\"} / node_filesystem_size_bytes)) * 100",
+            "refId": "A",
+            "legendFormat": "{{instance}} - {{mountpoint}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Network Traffic",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 8, "w": 24, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total[5m])",
+            "refId": "A",
+            "legendFormat": "RX {{instance}} {{device}}"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total[5m])",
+            "refId": "B",
+            "legendFormat": "TX {{instance}} {{device}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Alerts",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 12, "w": 6, "h": 3 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(ALERTS{alertstate=\"firing\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 5, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Active Agents",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 12, "w": 6, "h": 3 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(agent_status{status=\"active\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 1, "color": "yellow" },
+                { "value": 10, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Container Status",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 12, "w": 6, "h": 3 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(container_memory_usage_bytes)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": "green"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Node Status",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 12, "w": 6, "h": 3 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(up{job=\"node-exporter\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": "green"
+          }
+        }
+      }
+    ],
+    "links": [
+      {
+        "title": "Detailed Metrics",
+        "url": "/d/metrics",
+        "icon": "external link"
+      }
+    ]
+  }
+}

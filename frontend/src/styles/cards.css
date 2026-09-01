@@ -1,0 +1,254 @@
+/* ═══════════════════════════════════════════════════════════
+   InfraPilot Enterprise – Cards (cards.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Base Card ── */
+.card {
+  background: linear-gradient(160deg, var(--surface-3) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow), 0 0 0 1px var(--primary-dim);
+}
+
+/* ── Metric Card ── */
+.metric-card {
+  background: linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease);
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top right, rgba(59,130,246,.07), transparent 60%);
+  pointer-events: none;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Color accent on metric cards */
+.metric-card-cyan   { border-top: 2px solid var(--cyan); }
+.metric-card-blue   { border-top: 2px solid var(--primary); }
+.metric-card-green  { border-top: 2px solid var(--success); }
+.metric-card-amber  { border-top: 2px solid var(--warning); }
+.metric-card-red    { border-top: 2px solid var(--danger); }
+.metric-card-violet { border-top: 2px solid var(--violet); }
+
+.metric-title {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  color: var(--text);
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 10px;
+  letter-spacing: -0.02em;
+  animation: count-up 400ms var(--ease) both;
+}
+
+.metric-sub {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.metric-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  flex-shrink: 0;
+  transition: background var(--ease), box-shadow var(--ease);
+}
+
+.metric-card:hover .metric-icon {
+  background: var(--primary-dim);
+  box-shadow: 0 0 16px var(--primary-glow);
+}
+
+/* ── Stat Card (hero grid) ── */
+.stat-card-v2 {
+  background: linear-gradient(160deg, var(--surface-3), var(--surface-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--ease), box-shadow var(--ease), border-color var(--ease);
+  min-height: 120px;
+}
+
+.stat-card-v2::after {
+  content: '';
+  position: absolute;
+  inset: auto -30px -50px auto;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.stat-card-v2:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59,130,246,.3);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ── Glassmorphism Card ── */
+.glass-card {
+  background: rgba(13, 18, 32, 0.70);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* ── Panel Card (tables / charts) ── */
+.panel-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+
+.panel-card-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.panel-card-body {
+  padding: 16px 20px;
+}
+
+/* ── Status Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge-online,
+.badge-success,
+.badge-healthy {
+  background: var(--success-dim);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.badge-offline,
+.badge-danger,
+.badge-critical {
+  background: var(--danger-dim);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-warning,
+.badge-degraded {
+  background: var(--warning-dim);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-info,
+.badge-primary {
+  background: var(--primary-dim);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.badge-muted,
+.badge-neutral {
+  background: rgba(100,116,139,.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(100,116,139,.2);
+}
+
+/* ── Alert Item ── */
+.alert-item-v2 {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition: background var(--ease), border-color var(--ease);
+  animation: fade-in 280ms var(--ease) both;
+}
+
+.alert-item-v2:hover {
+  background: var(--surface-3);
+  border-color: var(--border-glow);
+}
+
+.alert-item-v2.severity-critical {
+  border-left: 3px solid var(--danger);
+  background: linear-gradient(90deg, rgba(239,68,68,.06), var(--surface-2));
+}
+
+.alert-item-v2.severity-warning {
+  border-left: 3px solid var(--warning);
+  background: linear-gradient(90deg, rgba(245,158,11,.06), var(--surface-2));
+}
+
+.alert-item-v2.severity-info {
+  border-left: 3px solid var(--primary);
+  background: linear-gradient(90deg, rgba(59,130,246,.06), var(--surface-2));
+}

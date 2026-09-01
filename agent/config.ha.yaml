@@ -1,0 +1,149 @@
+# InfraPilot Agent High Availability Configuration
+# Sprint 8.9: Multi-server failover support
+
+# Agent identity
+agent_id: "agent-${HOSTNAME}"
+version: "1.0.0"
+
+# High Availability Backend Servers
+# Primary and failover servers for resilient connectivity
+servers:
+  - url: "https://api1.company.com"
+    priority: 1
+  - url: "https://api2.company.com"
+    priority: 2
+  - url: "https://api3.company.com"
+    priority: 3
+
+# Connection settings
+connection:
+  # Timeout for each server attempt (seconds)
+  timeout: 10
+  
+  # Maximum retries before trying next server
+  max_retries: 3
+  
+  # Retry backoff interval (seconds)
+  retry_backoff: 5
+  
+  # Local queue size when all servers are down
+  local_queue_size: 1000
+  
+  # Local queue persistence directory
+  local_queue_dir: "/var/lib/infrapilot/queue"
+  
+  # Heartbeat interval (seconds)
+  heartbeat_interval: 30
+  
+  # Reconnect on WebSocket disconnect
+  reconnect_on_disconnect: true
+  
+  # Exponential backoff for reconnection
+  exponential_backoff: true
+  backoff_max: 300  # 5 minutes max
+
+# Security settings
+security:
+  # API key for authentication (required)
+  api_key: "${INFRA_PILOT_API_KEY}"
+  
+  # mTLS certificate paths (optional, for enhanced security)
+  cert_path: "/etc/infrapilot/certs/agent.crt"
+  key_path: "/etc/infrapilot/certs/agent.key"
+  ca_path: "/etc/infrapilot/certs/ca.crt"
+  
+  # TLS verification
+  verify_tls: true
+
+# Metrics collection
+metrics:
+  # Collection interval (seconds)
+  interval: 60
+  
+  # Metrics to collect
+  collect:
+    - system  # CPU, memory, disk, network
+    - docker  # Docker containers (if installed)
+    - kubernetes  # Kubernetes nodes/pods (if installed)
+    - processes  # Running processes
+    - services  # Systemd services
+    - filesystem  # Filesystem usage
+    - logs  # Recent log entries
+  
+  # Detailed metrics collection (default: false)
+  detailed: true
+  
+  # Process monitoring (top N processes by CPU/memory)
+  top_processes: 20
+  
+  # Network interfaces to monitor (empty = all)
+  interfaces: []
+
+# Logging
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json or text
+  output: "stdout"  # stdout, stderr, or file path
+  
+  # Log rotation (if output is file)
+  rotation:
+    max_size: "100MB"
+    max_age: "7d"
+    max_backups: 5
+
+# Offline mode
+offline:
+  # Enable offline buffering when servers are unreachable
+  enabled: true
+  
+  # Maximum disk space for offline queue (MB)
+  max_disk_usage: 500
+  
+  # Flush interval when offline (seconds)
+  flush_interval: 60
+
+# Resource limits
+resources:
+  # Maximum CPU usage (percentage)
+  max_cpu: 10
+  
+  # Maximum memory usage (MB)
+  max_memory: 256
+  
+  # Network rate limiting (Mbps)
+  max_network_mbps: 100
+
+# Advanced settings
+advanced:
+  # Enable debug mode
+  debug: false
+  
+  # Custom user agent
+  user_agent: "InfraPilot-Agent/1.0.0"
+  
+  # Proxy configuration (optional)
+  proxy: ""
+  
+  # DNS override (optional)
+  dns_servers: []
+  
+  # Network interface to use (optional)
+  network_interface: ""
+
+# Health check
+healthcheck:
+  # Enable internal health check server
+  enabled: false
+  
+  # Health check port
+  port: 8081
+  
+  # Health check endpoint
+  endpoint: "/healthz"
+
+# Tags for resource identification
+tags:
+  environment: "production"
+  region: "us-east-1"
+  datacenter: "dc1"
+  team: "platform"

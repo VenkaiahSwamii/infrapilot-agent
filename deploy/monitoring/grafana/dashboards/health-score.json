@@ -1,0 +1,293 @@
+{
+  "dashboard": {
+    "title": "System Health Score",
+    "uid": "health-score",
+    "tags": ["health", "slo", "infrapilot"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "ingredients": {
+      "cpu": 0.20,
+      "memory": 0.20,
+      "disk": 0.20,
+      "network": 0.15,
+      "services": 0.15,
+      "alerts": 0.10
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Overall Health Score",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "infrapilot_health_score",
+            "refId": "A",
+            "legendFormat": "Health"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "#d32f2f", "label": "Critical" },
+                { "value": 50, "color": "#f57c00", "label": "Warning" },
+                { "value": 75, "color": "#fbc02d", "label": "Degraded" },
+                { "value": 90, "color": "#388e3c", "label": "Healthy" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true,
+          "minValue": 0,
+          "maxValue": 100,
+          "displayMode": "gradient"
+        }
+      },
+      {
+        "id": 2,
+        "title": "CPU Score (20%)",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 8, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
+            "refId": "A",
+            "legendFormat": "CPU"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 70, "color": "yellow" },
+                { "value": 90, "color": "red" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "CPU Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 3,
+        "title": "Memory Score (20%)",
+        "type": "stat",
+        "gridPos": { "x": 8, "y": 8, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "refId": "A",
+            "legendFormat": "Memory"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 70, "color": "yellow" },
+                { "value": 90, "color": "red" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "Memory Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "title": "Disk Score (20%)",
+        "type": "stat",
+        "gridPos": { "x": 16, "y": 8, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(1 - (node_filesystem_avail_bytes{fstype=~\"ext4|xfs|btrfs\"} / node_filesystem_size_bytes)) * 100",
+            "refId": "A",
+            "legendFormat": "Disk"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 70, "color": "yellow" },
+                { "value": 90, "color": "red" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "Disk Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "title": "Network Score (15%)",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 12, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - ((rate(node_network_transmit_drop_total[5m]) + rate(node_network_receive_drop_total[5m])) / (rate(node_network_transmit_bytes_total[5m]) + rate(node_network_receive_bytes_total[5m])) * 100)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 95, "color": "yellow" },
+                { "value": 99, "color": "green" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "Network Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "Services Score (15%)",
+        "type": "stat",
+        "gridPos": { "x": 8, "y": 12, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "avg(up{job=~\"backend-api|postgres|redis|qdrant\"}) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 80, "color": "yellow" },
+                { "value": 95, "color": "green" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "Services Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "title": "Alerts Score (10%)",
+        "type": "stat",
+        "gridPos": { "x": 16, "y": 12, "w": 8, "h": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - (count(ALERTS{alertstate=\"firing\"}) * 10)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 50, "color": "yellow" },
+                { "value": 90, "color": "green" }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "value" },
+              "properties": [
+                { "id": "displayName", "value": "Alerts Weight" },
+                { "id": "color", "value": { "mode": "thresholds" } }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

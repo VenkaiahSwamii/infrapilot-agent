@@ -1,0 +1,164 @@
+/* ═══════════════════════════════════════════════════════════
+   InfraPilot Enterprise – Tables (tables.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Data Table ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.84rem;
+}
+
+.data-table thead tr {
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  padding: 11px 16px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.data-table td {
+  padding: 13px 16px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.data-table td strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.data-table tbody tr {
+  transition: background var(--ease);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(59,130,246,.05);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Sortable header ── */
+.th-sort {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.th-sort:hover { color: var(--text-secondary); }
+
+/* ── Table wrap ── */
+.table-wrap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.table-wrap.scrollable {
+  overflow-x: auto;
+}
+
+/* ── Empty state inside table ── */
+.table-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.table-empty svg {
+  opacity: 0.35;
+  margin-bottom: 14px;
+}
+
+/* ── Row actions ── */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--ease);
+}
+
+.data-table tbody tr:hover .row-actions {
+  opacity: 1;
+}
+
+/* ── Mini-row (key/value grid rows) ── */
+.kv-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  font-size: 0.83rem;
+}
+
+.kv-row:last-child { border-bottom: none; }
+
+.kv-key {
+  flex: 0 0 160px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kv-val {
+  flex: 1;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.80rem;
+  word-break: break-all;
+}
+
+/* ── Process table ── */
+.process-table-v2 {
+  display: grid;
+  gap: 4px;
+}
+
+.process-row-v2 {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 72px 72px 90px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: rgba(255,255,255,.03);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  transition: background var(--ease);
+}
+
+.process-row-v2:hover {
+  background: rgba(59,130,246,.07);
+  color: var(--text-secondary);
+}
+
+.process-row-v2.row-head {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.70rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}

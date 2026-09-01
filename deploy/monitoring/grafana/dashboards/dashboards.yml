@@ -1,0 +1,108 @@
+apiVersion: 1
+
+providers:
+  # InfraPilot Overview Dashboard
+  - name: 'InfraPilot Dashboards'
+    orgId: 1
+    folder: 'InfraPilot'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: true
+
+  # Infrastructure Overview
+  - name: 'Infrastructure'
+    orgId: 1
+    folder: 'Infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/infrastructure
+
+  # Application Monitoring
+  - name: 'Applications'
+    orgId: 1
+    folder: 'Applications'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/applications
+
+  # Database Monitoring
+  - name: 'Databases'
+    orgId: 1
+    folder: 'Databases'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/databases
+
+  # Kubernetes Monitoring
+  - name: 'Kubernetes'
+    orgId: 1
+    folder: 'Kubernetes'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/kubernetes
+
+# Dashboard annotations
+annotations:
+  list:
+    - name: InfraPilot Alerts
+      datasource: Prometheus
+      iconColor: '#e0b400'
+      expr: ALERTS{alertname=~".+"}
+      textFormat: "{{.Labels.alertname}}: {{.Annotations.description}}"
+      titleFormat: "Alert: {{.Labels.alertname}}"
+      tagKeys:
+        - alertname
+        - severity
+        - service
+    - name: Deployments
+      datasource: Prometheus
+      iconColor: '#34d399'
+      expr: changes(deploy_total[5m])
+      textFormat: "Deployment {{.Labels.host}}: {{.Labels.status}}"
+      titleFormat: "Deployment {{.Labels.host}}"
+      tagKeys:
+        - host
+        - status
+        - component
+
+# Dashboard search settings
+search:
+  maxResults: 100
+  recentDashboards: 10
+
+# Default dashboard
+homeDashboard:
+  uid: infrapilot-overview
+  path: /etc/grafana/dashboards/infrapilot-overview.json
+
+# Date/time settings
+dateFormats:
+  defaultTimeZone: UTC
+  default24Hour: true
+
+# Feature toggles
+featureToggles:
+  enableNewHierarchicalModel: true
+  unifiedAlerting: true
+  alerting: true
+  explore: true
+  mixed: true
+  traceToMetrics: true
+  traceToLogs: true
+  logs exploration: true

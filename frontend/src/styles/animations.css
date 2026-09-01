@@ -1,0 +1,121 @@
+/* ═══════════════════════════════════════════════════════════
+   InfraPilot Enterprise – Animations (animations.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-fast {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(34, 211, 238, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chart-draw {
+  from { stroke-dashoffset: 1000; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* ── Utility classes ── */
+.anim-fade-in        { animation: fade-in 320ms var(--ease) both; }
+.anim-fade-in-fast   { animation: fade-in-fast 180ms var(--ease) both; }
+.anim-slide-left     { animation: slide-in-left 280ms var(--ease) both; }
+.anim-slide-right    { animation: slide-in-right 280ms var(--ease) both; }
+.anim-scale-in       { animation: scale-in 260ms var(--ease-spring) both; }
+.anim-float          { animation: float 3.2s ease-in-out infinite; }
+
+/* Stagger delays for lists */
+.anim-stagger > *:nth-child(1)  { animation-delay:  0ms; }
+.anim-stagger > *:nth-child(2)  { animation-delay: 60ms; }
+.anim-stagger > *:nth-child(3)  { animation-delay:120ms; }
+.anim-stagger > *:nth-child(4)  { animation-delay:180ms; }
+.anim-stagger > *:nth-child(5)  { animation-delay:240ms; }
+.anim-stagger > *:nth-child(6)  { animation-delay:300ms; }
+.anim-stagger > *:nth-child(7)  { animation-delay:360ms; }
+.anim-stagger > *:nth-child(8)  { animation-delay:420ms; }
+
+/* Loading skeleton shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 40%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Live pulse indicator */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.live-dot.danger  { background: var(--danger);  }
+.live-dot.warning { background: var(--warning); }
+.live-dot.muted   { background: var(--text-muted); }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-soft);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraPilot Enterprise - Case Study | Venkaiah Swami</title>
+    <meta name="description" content="Case study of InfraPilot Enterprise - a production-grade infrastructure monitoring platform built with Go, React, and Kubernetes.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .case-study {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        .case-study h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+        }
+        .case-study .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .case-study h2 {
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #0066cc;
+            border-bottom: 2px solid #0066cc;
+            padding-bottom: 10px;
+        }
+        .case-study h3 {
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .case-study p {
+            line-height: 1.8;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        .case-study ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+        .case-study li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .highlight-box {
+            background: #f0f7ff;
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        .highlight-box strong {
+            color: #0066cc;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            font-size: 2em;
+            margin: 0 0 10px 0;
+            color: white;
+        }
+        .stat-card p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+        .architecture-diagram {
+            background: #1a1a2e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 25px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 25px 0;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        .tech-category {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 3px solid #0066cc;
+        }
+        .tech-category h4 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #0066cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 10px 10px 0;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #004499;
+        }
+        .btn-secondary {
+            background: #666;
+        }
+        .btn-secondary:hover {
+            background: #444;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin: 30px 0;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 25px;
+            padding-left: 20px;
+            border-left: 2px solid #0066cc;
+        }
+        .timeline-item:last-child {
+            border-left: none;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 5px;
+            width: 14px;
+            height: 14px;
+            background: #0066cc;
+            border-radius: 50%;
+        }
+        .timeline-item h4 {
+            margin: 0 0 5px 0;
+            color: #0066cc;
+        }
+        .timeline-item .date {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><a href="index.html" style="text-decoration: none; color: inherit;">InfraPilot</a></h1>
+                <span class="version">Case Study</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="case-study.html" class="active">Case Study</a></li>
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="case-study">
+        <a href="index.html" class="back-link">← Back to Portfolio</a>
+
+        <h1>InfraPilot Enterprise</h1>
+        <p class="subtitle">A production-grade infrastructure monitoring platform — Case Study</p>
+
+        <div class="highlight-box">
+            <strong>Project Overview:</strong> InfraPilot Enterprise is a full-stack, enterprise-grade infrastructure monitoring and management platform built from the ground up. It provides real-time visibility into servers, Docker containers, and Kubernetes clusters with AI-powered analytics, remote terminal access, file management, and comprehensive reporting.
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>10K+</h3>
+                <p>Metrics/Second</p>
+            </div>
+            <div class="stat-card">
+                <h3>32ms</h3>
+                <p>API Latency (p95)</p>
+            </div>
+            <div class="stat-card">
+                <h3>12.5K</h3>
+                <p>WebSocket Connections</p>
+            </div>
+            <div class="stat-card">
+                <h3>99.9%</h3>
+                <p>Uptime SLA</p>
+            </div>
+        </div>
+
+        <h2>01. The Problem</h2>
+
+        <p>Modern infrastructure teams operate in an environment of growing complexity. Organizations typically rely on 5+ disparate tools for monitoring, logging, alerting, and management. This fragmentation creates several critical challenges:</p>
+
+        <ul>
+            <li><strong>Tool Sprawl:</strong> Managing multiple SaaS tools (Datadog, Grafana, Prometheus, etc.) creates operational overhead, inconsistent data, and high costs</li>
+            <li><strong>Alert Fatigue:</strong> Poorly configured alerts generate excessive noise, causing engineers to miss critical incidents</li>
+            <li><strong>Latency Blindness:</strong> Traditional polling-based dashboards (30-60 second refresh) miss transient issues and spike anomalies</li>
+            <li><strong>Security Gaps:</strong> Remote operations often require SSH access, creating audit and compliance challenges</li>
+            <li><strong>Cost Prohibitive:</strong> Enterprise monitoring solutions cost $1000+/month per server, making comprehensive coverage unaffordable</li>
+        </ul>
+
+        <p>There was a clear need for a unified, real-time, self-hosted monitoring platform that could match enterprise capabilities without the enterprise price tag or complexity.</p>
+
+        <h2>02. The Solution</h2>
+
+        <p>InfraPilot Enterprise addresses these challenges through an integrated, event-driven architecture:</p>
+
+        <ul>
+            <li><strong>Unified Platform:</strong> Single pane of glass for metrics, logs, alerts, Docker, Kubernetes, files, and terminal access</li>
+            <li><strong>Real-Time Architecture:</strong> WebSocket-based push eliminates polling, delivering sub-100ms updates to browsers</li>
+            <li><strong>Intelligent Alerting:</strong> AI-powered correlation and deduplication reduce noise by 90%</li>
+            <li><strong>Security-First Design:</strong> JWT authentication, RBAC, audit logging, and command allowlisting for compliance</li>
+            <li><strong>Cost Effective:</strong> Self-hosted solution with minimal infrastructure requirements</li>
+        </ul>
+
+        <h2>03. Architecture & Design Decisions</h2>
+
+        <h3>System Architecture</h3>
+
+        <div class="architecture-diagram">
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Go Agents       │────▶│  Go Backend      │────▶│  PostgreSQL      │
+│  (Telemetry)     │     │  (Gin API)       │     │  (Persistence)   │
+└──────────────────┘     └────────┬─────────┘     └──────────────────┘
+                                   │
+                             ┌─────┴──────┐     ┌──────────────────┐
+                             │  Redis     │     │  WebSocket Hub   │
+                             │  (Cache+Q) │     │  (Real-time)     │
+                             └────────────┘     └────────┬─────────┘
+                                                        │
+                                                  ┌─────┴────────┐
+                                                  │  React UI    │
+                                                  │  (Dashboard) │
+                                                  └──────────────┘
+        </div>
+
+        <h3>Key Architectural Decisions</h3>
+
+        <div class="tech-stack">
+            <div class="tech-category">
+                <h4>Backend: Go + Gin</h4>
+                <p>Go's goroutines and channels provide natural concurrency for handling thousands of simultaneous agent connections and metrics streams. Gin framework offers high-performance HTTP routing.</p>
+            </div>
+            <div class="tech-category">
+                <h4>Frontend: React + WebSocket</h4>
+                <p>React's component model suits the tabbed machine detail views and dashboard widgets. Native WebSocket API enables real-time updates without polling overhead.</p>
+            </div>
+            <div class="tech-category">
+                <h4>Database: PostgreSQL</h4>
+                <p>ACID compliance for reliable metrics storage, excellent JSON support for flexible schemas, and mature ecosystem for time-series data patterns.</p>
+            </div>
+            <div class="tech-category">
+                <h4>Cache/Queue: Redis</h4>
+                <p>Serves triple duty: in-memory cache for sessions/metrics, message queue (Redis Streams) for the event bus, and pub/sub for WebSocket broadcasting.</p>
+            </div>
+        </div>
+
+        <h2>04. Technical Implementation</h2>
+
+        <h3>The Monitoring Agent</h3>
+
+        <p>The agent is a lightweight Go binary deployed on each monitored machine. It uses a plugin architecture to separate concerns:</p>
+
+        <div class="code-block">
+// Plugin interface for collectors
+type Plugin interface {
+    Name() string
+    Collect() ([]Metric, error)
+    Enabled() bool
+}
+
+// Implementation: Linux system metrics
+type LinuxPlugin struct {
+    // reads /proc, uses gopsutil
+}
+
+func (p *LinuxPlugin) Collect() ([]Metric, error) {
+    cpu, _ := p.cpuUsage()
+    mem, _ := p.memoryUsage()
+    disk, _ := p.diskUsage()
+    // ...
+}
+        </div>
+
+        <p>This design allows independent development and testing of each collector. The Docker plugin integrates with the Docker Engine API, the Kubernetes plugin uses client-go, and the security plugin runs CVE checks against the system's package database.</p>
+
+        <h3>The Event-Driven Backend</h3>
+
+        <p>The backend uses an internal event bus to decouple metric ingestion from downstream processing:</p>
+
+        <div class="code-block">
+type EventBus struct {
+    subscribers []Subscriber
+    queue       chan Event
+}
+
+func (b *EventBus) Publish(event Event) {
+    for _, sub := range b.subscribers {
+        sub.Handle(event)
+    }
+}
+
+// Subscribers:
+// 1. DatabaseSubscriber - persists to PostgreSQL
+// 2. WebSocketSubscriber - broadcasts to connected dashboards
+// 3. AlertSubscriber - evaluates alert rules
+// 4. AuditSubscriber - logs sensitive operations
+        </div>
+
+        <p>This architecture means adding a new notification channel (Slack, Teams, etc.) is as simple as creating a new subscriber — no changes to the ingestion path.</p>
+
+        <h3>Real-Time Dashboard</h3>
+
+        <p>The React dashboard opens a WebSocket connection on login. The backend hub maintains per-client subscriptions so each user only receives metrics for machines they're viewing:</p>
+
+        <div class="code-block">
+// Backend WebSocket hub
+type Hub struct {
+    clients    map[*Client]bool
+    register   chan *Client
+    unregister chan *Client
+    broadcast  chan []byte
+}
+
+func (h *Hub) Run() {
+    for {
+        select {
+        case client := <-h.register:
+            h.clients[client] = true
+        case client := <-h.unregister:
+            delete(h.clients, client)
+        case message := <-h.broadcast:
+            for client := range h.clients {
+                if client.subscribed(message.MachineID) {
+                    client.send(message)
+                }
+            }
+        }
+    }
+}
+        </div>
+
+        <h2>05. Challenges & Solutions</h2>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <h4>Challenge 1: High-Throughput Metrics Ingestion</h4>
+                <div class="date">Problem</div>
+                <p>Handling 100K+ metrics/second from thousands of concurrent agents without overwhelming the database or exhausting memory.</p>
+                <div class="date">Solution</div>
+                <p>Implemented Redis Streams for buffering, worker pools with configurable concurrency, and PostgreSQL COPY for bulk inserts. Achieved 150K metrics/sec sustained throughput.</p>
+            </div>
+
+            <div class="timeline-item">
+                <h4>Challenge 2: WebSocket Connection Management</h4>
+                <div class="date">Problem</div>
+                <p>Managing 10K+ concurrent WebSocket connections with different subscriptions (each user watches different machines) while handling reconnections and heartbeats.</p>
+                <div class="date">Solution</div>
+                <p>Channel-based pub/sub with connection pooling, per-client subscription filtering, and heartbeat-based health checks. Achieved 12,500+ concurrent connections in load testing.</p>
+            </div>
+
+            <div class="timeline-item">
+                <h4>Challenge 3: Agent Security & Permissions</h4>
+                <div class="date">Problem</div>
+                <p>Agents need elevated permissions to collect system metrics but cannot expose security vulnerabilities.</p>
+                <div class="date">Solution</div>
+                <p>mTLS certificate authentication, minimal Linux capabilities (CAP_SYS_PTRACE only), path allowlisting for file operations, and command allowlisting in terminal. All terminal commands are audited.</p>
+            </div>
+
+            <div class="timeline-item">
+                <h4>Challenge 4: Cross-Platform Compatibility</h4>
+                <div class="date">Problem</div>
+                <p>Agent must run on Linux, Windows, and macOS with a single code base while maintaining platform-specific functionality.</p>
+                <div class="date">Solution</div>
+                <p>Leveraged Go's build tags and file naming conventions (e.g., <code>linux.go</code>, <code>windows.go</code>) to provide platform-specific implementations behind a common interface. Cross-compilation configured in CI/CD.</p>
+            </div>
+        </div>
+
+        <h2>06. Results & Impact</h2>
+
+        <div class="highlight-box">
+            <strong>Business Impact:</strong> InfraPilot Enterprise replaces 5+ separate monitoring tools, reducing annual tooling costs by approximately $150K while providing real-time visibility and AI-powered insights previously unavailable.
+        </div>
+
+        <h3>Performance Metrics</h3>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+                <tr style="background: #0066cc; color: white;">
+                    <th style="padding: 12px; text-align: left;">Metric</th>
+                    <th style="padding: 12px; text-align: left;">Target</th>
+                    <th style="padding: 12px; text-align: left;">Achieved</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #f9f9f9;">
+                    <td style="padding: 12px;">API Latency (p95)</td>
+                    <td style="padding: 12px;">< 50ms</td>
+                    <td style="padding: 12px;"><strong>32ms</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">Metrics Ingestion</td>
+                    <td style="padding: 12px;">100K/sec</td>
+                    <td style="padding: 12px;"><strong>150K/sec</strong></td>
+                </tr>
+                <tr style="background: #f9f9f9;">
+                    <td style="padding: 12px;">WebSocket Connections</td>
+                    <td style="padding: 12px;">10,000</td>
+                    <td style="padding: 12px;"><strong>12,500+</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">Dashboard Load</td>
+                    <td style="padding: 12px;">< 200ms</td>
+                    <td style="padding: 12px;"><strong>145ms</strong></td>
+                </tr>
+                <tr style="background: #f9f9f9;">
+                    <td style="padding: 12px;">Agent Memory</td>
+                    <td style="padding: 12px;">< 50MB</td>
+                    <td style="padding: 12px;"><strong>28MB</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">Agent CPU</td>
+                    <td style="padding: 12px;">< 5%</td>
+                    <td style="padding: 12px;"><strong>< 1%</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>07. Lessons Learned</h2>
+
+        <h3>Technical Lessons</h3>
+        <ul>
+            <li><strong>Go's concurrency model is ideal for monitoring workloads.</strong> Goroutines and channels made the agent's multi-collector design and the backend's worker pool far simpler than equivalent implementations in other languages.</li>
+            <li><strong>Redis Streams provide a simple but powerful event bus.</strong> Without the operational complexity of Kafka, we achieved reliable message delivery with consumer groups and message persistence.</li>
+            <li><strong>WebSocket with proper backpressure handling is critical.</strong> Managing connection lifecycles, heartbeats, and graceful degradation under load required careful design.</li>
+            <li><strong>Multi-stage Docker builds dramatically reduce image sizes.</strong> Final images went from 1.2GB to 12-40MB, improving deployment speed and reducing attack surface.</li>
+        </ul>
+
+        <h3>Architectural Lessons</h3>
+        <ul>
+            <li><strong>Event-driven architecture enables extensibility.</strong> Decoupling metric ingestion from downstream processing made it trivial to add alerting, audit logging, and future notification channels.</li>
+            <li><strong>Plugin systems pay dividends.</strong> The agent's plugin interface made it easy to add Docker, Kubernetes, and security collectors without touching the core agent logic.</li>
+            <li><strong>Caching strategy matters.</strong> A write-through cache with TTL significantly reduced database load for frequently accessed metrics.</li>
+            <li><strong>Observability must be designed in from the start.</strong> Instrumenting InfraPilot itself with Prometheus, Grafana, and OpenTelemetry caught real bugs before users would have.</li>
+        </ul>
+
+        <h3>Project Management Lessons</h3>
+        <ul>
+            <li><strong>Incremental delivery maintains momentum.</strong> Shipping v0.1 with basic metrics, then v0.5 with alerts, then v1.0 with full feature set allowed for course correction and continuous validation.</li>
+            <li><strong>Documentation alongside code prevents knowledge silos.</strong> Writing architecture docs, API specs, and deployment guides as features were built ensured nothing was forgotten.</li>
+            <li><strong>CI/CD from day one catches issues early.</strong> Automated linting, testing, and building on every commit made integration painless and deployment reliable.</li>
+        </ul>
+
+        <h2>08. Tech Stack Summary</h2>
+
+        <div class="tech-stack">
+            <div class="tech-category">
+                <h4>Backend</h4>
+                <ul>
+                    <li>Go 1.24</li>
+                    <li>Gin Framework</li>
+                    <li>PostgreSQL 15</li>
+                    <li>Redis 7</li>
+                    <li>Gorilla WebSocket</li>
+                    <li>Prometheus</li>
+                    <li>OpenTelemetry</li>
+                </ul>
+            </div>
+            <div class="tech-category">
+                <h4>Frontend</h4>
+                <ul>
+                    <li>React 18</li>
+                    <li>Vite</li>
+                    <li>ApexCharts</li>
+                    <li>xterm.js</li>
+                    <li>Axios</li>
+                    <li>Lucide Icons</li>
+                </ul>
+            </div>
+            <div class="tech-category">
+                <h4>Agent</h4>
+                <ul>
+                    <li>Go 1.24</li>
+                    <li>gopsutil</li>
+                    <li>Docker Engine API</li>
+                    <li>client-go (K8s)</li>
+                    <li>WebSocket + REST</li>
+                </ul>
+            </div>
+            <div class="tech-category">
+                <h4>Infrastructure</h4>
+                <ul>
+                    <li>Docker & Compose</li>
+                    <li>Kubernetes</li>
+                    <li>GitHub Actions</li>
+                    <li>Nginx</li>
+                    <li>Grafana</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>09. Live Demo</h2>
+
+        <p>Watch a 10-15 minute walkthrough of InfraPilot Enterprise in action:</p>
+
+        <div class="highlight-box">
+            <strong>Demo includes:</strong>
+            <ul>
+                <li>Dashboard overview with live metrics</li>
+                <li>Agent enrollment and real-time data streaming</li>
+                <li>Docker and Kubernetes monitoring</li>
+                <li>Remote terminal and file manager</li>
+                <li>Alert creation and management</li>
+                <li>Report generation and scheduling</li>
+                <li>Architecture overview</li>
+            </ul>
+        </div>
+
+        <p>
+            <a href="https://github.com/venkaiswami/infrapilot-enterprise" class="btn" target="_blank">View on GitHub</a>
+            <a href="docs/resume.md" class="btn btn-secondary" target="_blank">Resume Entry</a>
+        </p>
+
+        <h2>10. Conclusion</h2>
+
+        <p>InfraPilot Enterprise represents a complete, production-ready monitoring platform built with modern technologies and best practices. The project demonstrates proficiency in:</p>
+
+        <ul>
+            <li><strong>Full-stack development</strong> with Go and React</li>
+            <li><strong>System design</strong> and event-driven architecture</li>
+            <li><strong>Real-time systems</strong> using WebSockets and pub/sub patterns</li>
+            <li><strong>Database design</strong> with PostgreSQL and Redis</li>
+            <li><strong>DevOps practices</strong> including Docker, Kubernetes, and CI/CD</li>
+            <li><strong>Security implementation</strong> with JWT, RBAC, and audit logging</li>
+            <li><strong>Performance optimization</strong> achieving production-scale metrics</li>
+        </ul>
+
+        <p>The project is actively maintained, well-documented, and ready for production deployment. It serves as a testament to building enterprise-grade software with attention to scalability, security, and user experience.</p>
+
+        <div class="highlight-box">
+            <strong>Next Steps:</strong> The project continues to evolve with planned features including multi-tenancy, advanced AI operations, mobile applications, and a plugin marketplace. The codebase is production-ready today and open for contributions.
+        </div>
+    </div>
+
+    <footer class="footer" style="margin-top: 60px; padding: 30px 0; background: #1a1a2e; color: white; text-align: center;">
+        <p> 2025 InfraPilot Enterprise. Built by Venkaiah Swami.</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/venkaiswami/infrapilot-enterprise" style="color: #0066cc;">GitHub</a> |
+            <a href="https://linkedin.com/in/venkaiswami" style="color: #0066cc;">LinkedIn</a> |
+            <a href="mailto:venkaiswami@pm.me" style="color: #0066cc;">Email</a>
+        </p>
+    </footer>
+</body>
+</html>

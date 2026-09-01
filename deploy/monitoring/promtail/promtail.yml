@@ -1,0 +1,246 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+# Client configuration for sending logs to Loki
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+# Scrape configurations
+scrape_configs:
+  # System logs (journald)
+  - job_name: systemd
+    journal:
+      max_age: 12h
+      path: /var/log/journal
+      labels:
+        job: systemd
+        host: ${HOSTNAME}
+        environment: production
+    relabel_configs:
+      - source_labels: [__journal__systemd_unit]
+        target_label: unit
+      - source_labels: [__journal_syslog_identifier]
+        target_label: syslog_identifier
+
+  # /var/log/syslog
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          host: ${HOSTNAME}
+          environment: production
+          __path__: /var/log/syslog
+
+  # /var/log/auth.log
+  - job_name: auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: auth
+          host: ${HOSTNAME}
+          environment: production
+          __path__: /var/log/auth.log
+
+  # Application logs
+  - job_name: applications
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: applications
+          host: ${HOSTNAME}
+          environment: production
+          __path__: /var/log/*.log
+
+  # Docker container logs
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          host: ${HOSTNAME}
+          environment: production
+          __path__: /var/lib/docker/containers/*/*.log
+
+    # Docker log pipeline for JSON parsing
+    # Extract labels from Docker JSON log format
+    # docker --log-driver=json-file
+  - job_name: docker_containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: /(.*)
+        target_label: container_name
+      - source_labels: [__meta_docker_container_log_stream]
+        regex: stdout
+        action: keep
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: project
+      - source_labels: [__meta_docker_container_name]
+        regex: /([^/]+)
+        target_label: container
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
+
+  # Kubernetes pods logs
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - default
+            - monitoring
+            - infrapilot
+
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_promtail_scrape]
+        action: keep
+        regex: true
+
+      - source_labels: [__meta_kubernetes_pod_annotation_promtail_jobname]
+        action: replace
+        target_label: job
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        action: replace
+        target_label: container
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: replace
+        target_label: app
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_label_component]
+        action: replace
+        target_label: component
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_annotation_log_format]
+        action: replace
+        target_label: log_format
+        regex: (.+)
+
+    # Default path for Kubernetes logs
+    __path__: /var/log/pods/*/*/*.log
+
+  # Backend application logs
+  - job_name: infrapilot-backend
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: backend
+          application: infrapilot
+          host: ${HOSTNAME}
+          environment: production
+          namespace: infrapilot
+          __path__: /var/log/infrapilot/backend/*.log
+
+  # Frontend application logs
+  - job_name: infrapilot-frontend
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: frontend
+          application: infrapilot
+          host: ${HOSTNAME}
+          environment: production
+          namespace: infrapilot
+          __path__: /var/log/infrapilot/frontend/*.log
+
+  # Agent logs
+  - job_name: infrapilot-agent
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: agent
+          application: infrapilot
+          host: ${HOSTNAME}
+          environment: production
+          namespace: infrapilot
+          __path__: /var/log/infrapilot/agent/*.log
+
+# Pipeline stages for log processing
+# Global pipeline stages
+pipeline_stages:
+  # Add log line number
+  - match:
+      selector: '{job=~".+"}'
+      stages:
+        - regex:
+            expression: '^(?P<timestamp>\S+ \S+) \[(?P<severity>\w+)\] (?P<message>.*)$'
+
+        # Parse timestamp
+        - timestamp:
+            source: timestamp
+            format: "2006-01-02 15:04:05"
+
+        # Map severity to labels
+        - labels:
+            severity:
+
+  # Docker JSON log parsing
+  - match:
+      selector: '{job="docker"}'
+      stages:
+        - json:
+            expressions:
+              log: log
+              stream: stream
+              time: time
+
+        - timestamp:
+            source: time
+            format: RFC3339Nano
+
+        - labels:
+            stream:
+
+  # Kubernetes log parsing with structured logging
+  - match:
+      selector: '{namespace=~".+"}'
+      stages:
+        - regex:
+            expression: '^(?P<timestamp>\S+ \S+) (?P<severity>\w+) (?P<message>.*)$'
+
+        - timestamp:
+            source: timestamp
+            format: "2006-01-02 15:04:05.999999999 -0700 MST"
+
+        - labels:
+            severity:
+
+# Limit the rate of logs (optional - prevent log storms)
+# limit: This configuration is useful to prevent excessive resource consumption
+# from log bursts or misconfigured services generating excessive logs.
+
+# Example limit config:
+# limit:
+#   rate: 10000
+#   burst: 5000

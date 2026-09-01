@@ -1,0 +1,149 @@
+# Node Exporter Configuration
+# Reference: https://github.com/prometheus/node_exporter
+
+# Web server configuration
+web:
+  listen_address: "0.0.0.0:9100"
+  # listen_address: "127.0.0.1:9100"  # Uncomment for localhost only
+
+# Collector configuration
+collectors:
+  enabled:
+    # Hardware metrics
+    - cpu
+    - meminfo
+    - hwmon
+    - thermal_zone
+    - acpi
+    
+    # Filesystem metrics
+    - filesystem
+    - diskstats
+    - mountstats
+    
+    # Network metrics
+    - netdev
+    - netstat
+    - sockstat
+    - tcpstat
+    
+    # System metrics
+    - loadavg
+    - uptime
+    - time
+    - uname
+    - vmstat
+    - stat
+    
+    # Process metrics
+    - processes
+    - process
+    
+    # Systemd metrics
+    - systemd
+    
+    # Textfile metrics (for custom metrics)
+    - textfile
+    
+    # Logind metrics
+    - logind
+    
+    # IPv6 metrics
+    - ipvs
+    
+  disabled:
+    # Disable collectors that may cause issues
+    - devstat  # May cause high cardinality
+    - edac     # Only for some hardware
+    - infiniband  # Only if InfiniBand is present
+    - megacli  # Only for RAID controllers
+    - nvml     # Only for NVIDIA GPUs
+    - rapl     # Only for Intel CPUs
+    - zfs       # Only if ZFS is present
+
+# Textfile directory for custom metrics
+textfile:
+  directory: "/var/lib/node_exporter/textfile_collector"
+
+# Collector-specific options
+cpu:
+  # Enable CPU frequency statistics
+  info: true
+
+diskstats:
+  # Disk devices to monitor
+  devices:
+    - "^(sd[a-z]|nvme[0-9]+n[0-9]+)"
+  # Disable if no disks present
+  ignored_device_match_regexp: ""
+
+filesystem:
+  # Filesystem types to monitor
+  filesystems:
+    - "ext4"
+    - "xfs"
+    - "btrfs"
+    - "tmpfs"
+    - "sysfs"
+    - "proc"
+    - "devtmpfs"
+  # Mount points to ignore
+  ignored-mount-points:
+    - "/proc"
+    - "/sys"
+    - "/dev"
+    - "/run"
+    - "/snap"
+
+hwmon:
+  # Enable hardware monitoring
+  chips:
+    - "*"
+    # - "coretemp.*"  # Intel CPU temperature
+    # - "nct*"        # Nuvoton temperature sensors
+
+meminfo:
+  # Enable memory information
+  memory: true
+  swap: true
+
+netdev:
+  # Network interface device regexp
+  device-blacklist: "^(lo|docker[0-9]*|br-[a-f0-9]{12})$"
+
+netstat:
+  # Enable network statistics
+  tcp:
+    listen-queue-size: true
+    listen-queue-ignored-overflow: true
+  ip:
+    connections: true
+
+processes:
+  # Total number of processes
+  processes: true
+
+sockstat:
+  # Socket statistics
+  sockstat: true
+
+tcpstat:
+  # TCP statistics
+  tcpstat: true
+
+thermal_zone:
+  # Thermal zone monitoring
+  devices: ".*"
+  ignored-devices: ""
+
+# Logging
+logging:
+  # Log level: debug, info, warn, error
+  level: info
+  format: "logger"
+  # timestamp: true
+
+# Performance options
+performance:
+  # Maximum number of parallel OS threads
+  max-procs: 1

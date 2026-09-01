@@ -1,0 +1,75 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+        cache: true
+        cache-dependency-path: backend/go.sum
+    
+    - name: Download dependencies
+      run: go mod download
+      working-directory: ./backend
+    
+    - name: Verify dependencies
+      run: go mod verify
+      working-directory: ./backend
+    
+    - name: Run go fmt
+      run: go fmt ./...
+      working-directory: ./backend
+    
+    - name: Run go vet
+      run: go vet ./...
+      working-directory: ./backend
+    
+    - name: Static analysis
+      uses: golangci/golangci-lint-action@v6
+      with:
+        working-directory: backend
+        version: latest
+        args: --timeout=5m
+    
+    - name: Run unit tests
+      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      working-directory: ./backend
+    
+    - name: Check coverage
+      run: |
+        go tool cover -func=coverage.out
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        echo "Coverage: $COVERAGE%"
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "ERROR: Coverage is below 80%"
+          exit 1
+        fi
+      working-directory: ./backend
+    
+    - name: Build binary
+      run: go build -ldflags='-w -s' -o infrapilot-server ./cmd/api
+      working-directory: ./backend
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-coverage
+        path: backend/coverage.out
+      if: always()

@@ -1,0 +1,140 @@
+groups:
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      # CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: |
+          (
+            (100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100))
+            OR
+            (100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100))
+          ) > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% for more than 5 minutes"
+          hostname: "{{ $labels.instance }}"
+          metric: "CPU usage"
+          value: "{{ $value }}%"
+          suggested_action: "Check running processes, consider scaling resources"
+
+      # Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}% for more than 5 minutes"
+          hostname: "{{ $labels.instance }}"
+          metric: "Memory usage"
+          value: "{{ $value }}%"
+          suggested_action: "Check memory-intensive processes, consider adding RAM or restarting services"
+
+      # Disk Usage Alert
+      - alert: HighDiskUsage
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Disk usage is {{ $value }}% on {{ $labels.mountpoint }}"
+          hostname: "{{ $labels.instance }}"
+          metric: "Disk usage"
+          value: "{{ $value }}%"
+          suggested_action: "Clean up disk space, expand volume, or move data to external storage"
+
+      # Node Down Alert
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "Node {{ $labels.instance }} is down"
+          description: "Node exporter is unreachable for more than 1 minute"
+          hostname: "{{ $labels.instance }}"
+          metric: "Node status"
+          value: "DOWN"
+          suggested_action: "Check node connectivity, power status, and network configuration"
+
+      # Container Down Alert
+      - alert: ContainerDown
+        expr: |
+          absent(container_memory_usage_bytes{name=~".+"}) or up{job="cadvisor"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+          service: docker
+        annotations:
+          summary: "Container monitoring is down"
+          description: "cAdvisor is not reporting container metrics"
+          metric: "Container monitoring"
+          value: "DOWN"
+          suggested_action: "Restart cAdvisor, check Docker daemon status"
+
+      # High Load Average
+      - alert: HighLoadAverage
+        expr: node_load1 / (count(node_cpu_seconds_total{mode="system"}) WITHOUT (cpu, mode)) > 2
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "High load average on {{ $labels.instance }}"
+          description: "Load average (1m) is {{ $value }} times the CPU count"
+          hostname: "{{ $labels.instance }}"
+          metric: "Load average"
+          value: "{{ $value }}"
+          suggested_action: "Investigate processes causing high load, consider load balancing"
+
+      # High Network Packet Loss
+      - alert: HighPacketLoss
+        expr: |
+          rate(node_network_transmit_drop_total[5m]) + rate(node_network_receive_drop_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "High packet loss on {{ $labels.instance }} ({{ $labels.device }})"
+          description: "{{ $value }} packets dropped per second"
+          hostname: "{{ $labels.instance }}"
+          metric: "Packet loss"
+          value: "{{ $value }} packets/s"
+          suggested_action: "Check network interface, cables, switches, and network congestion"
+
+      # Low Disk Space
+      - alert: LowDiskSpace
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes)) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: node
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "{{ $labels.mountpoint }} has less than 20% free space"
+          hostname: "{{ $labels.instance }}"
+          metric: "Disk space"
+          value: "{{ $value }}% used"
+          suggested_action: "Archive old logs, clean temporary files, or expand disk"
