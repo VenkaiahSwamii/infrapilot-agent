@@ -100,7 +100,7 @@ func ApproveMachine(c *gin.Context) {
 		host = "localhost:8080"
 	}
 
-	installCmd := fmt.Sprintf("curl -sSL %s://%s/downloads/install.sh | sudo bash -s %s://%s", scheme, host, scheme, host)
+	installCmd := fmt.Sprintf("curl -sSL %s://%s/downloads/install.sh | bash -s %s://%s", scheme, host, scheme, host)
 	if strings.Contains(strings.ToLower(req.OS), "win") {
 		installCmd = fmt.Sprintf("irm %s://%s/downloads/install.ps1 | iex", scheme, host)
 	}

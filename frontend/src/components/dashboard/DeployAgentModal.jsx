@@ -80,12 +80,12 @@ export default function DeployAgentModal({ isOpen, onClose }) {
       title: 'Linux (Ubuntu, Debian, RHEL, CentOS, Rocky, Fedora)',
       icon: Terminal,
       color: '#22c55e',
-      description: 'Single-line automated curl installer with systemd service registration.',
-      command: `curl -fsSL ${serverUrl}/downloads/install.sh | sudo bash -s -- --server "${serverUrl}" --token "${currentToken}"`,
+      description: 'Single-line automated native installer (No Docker, No Sudo required).',
+      command: `curl -fsSL ${serverUrl}/downloads/install.sh | bash -s -- --server "${serverUrl}" --token "${currentToken}"`,
       steps: [
-        'Run the one-line installer command in your root or sudo shell.',
-        'The script downloads the compiled binary and configures /etc/infrapilot/config.json.',
-        'Starts the infrapilot-agent systemd daemon with automatic restart on failure.',
+        'Run the one-line installer command in any standard user shell (no sudo required).',
+        'Downloads the compiled native binary into ~/.infrapilot (or /opt/infrapilot if root).',
+        'Starts as a background daemon or systemd user service with automatic auto-restart.',
       ],
     },
     windows: {

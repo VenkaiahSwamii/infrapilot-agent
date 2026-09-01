@@ -127,7 +127,7 @@ export default function AgentsPage() {
     }
   };
 
-  const snippetLinux = `curl -sSL ${installUrlRemote}/downloads/install.sh | sudo bash -s ${installUrlRemote}`;
+  const snippetLinux = `curl -sSL ${installUrlRemote}/downloads/install.sh | bash -s ${installUrlRemote}`;
   const snippetWindows = `irm ${installUrl}/downloads/install.ps1 | iex`;
   const snippetDocker = `docker run -d --name infrapilot-agent --restart always --net=host -e BACKEND_URL=${installUrlRemote} infrapilot/agent:latest`;
 
@@ -574,10 +574,10 @@ export default function AgentsPage() {
                 const targetServerUrl = getNormalizedServerUrl(customEndpoint);
                 const activeCommand =
                   deployTab === 'linux'
-                    ? `curl -sSL ${targetServerUrl}/downloads/install.sh | sudo bash -s ${targetServerUrl}`
+                    ? `curl -sSL ${targetServerUrl}/downloads/install.sh | bash -s ${targetServerUrl}`
                     : deployTab === 'windows'
                     ? `irm ${targetServerUrl}/downloads/install.ps1 | iex`
-                    : `sudo docker run -d --name infrapilot-agent --restart always --net=host -e BACKEND_URL=${targetServerUrl} infrapilot/agent:latest`;
+                    : `docker run -d --name infrapilot-agent --restart always --net=host -e BACKEND_URL=${targetServerUrl} infrapilot/agent:latest`;
 
                 return (
                   <>
