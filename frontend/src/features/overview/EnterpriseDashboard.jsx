@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Eye,
   Trash2,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
 import { listAlerts } from '../../api/alerts.js';
@@ -24,6 +26,8 @@ import { createLiveEventsSocket } from '../../websocket/liveEvents.js';
 import { getMachineId } from '../../utils/machineId.js';
 import { useAlertStore } from '../../store/alertStore.jsx';
 import QuickHostDrawer from '../../components/dashboard/QuickHostDrawer.jsx';
+import HostAccessModal from '../../components/dashboard/HostAccessModal.jsx';
+import HostSecurityModal from '../../components/dashboard/HostSecurityModal.jsx';
 
 // SVG OS Icons
 function LinuxIcon() {
@@ -222,24 +226,56 @@ export default function EnterpriseDashboard() {
   const [liveMetrics, setLiveMetrics] = useState({});
   const [alerts, setAlerts] = useState(DEFAULT_ALERTS);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('online');
   const [timeRange, setTimeRange] = useState('Last 6 Hours');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMachineForDrawer, setSelectedMachineForDrawer] = useState(null);
+  const [selectedMachineForAccess, setSelectedMachineForAccess] = useState(null);
+  const [selectedMachineForSecurity, setSelectedMachineForSecurity] = useState(null);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [activeDonutFilter, setActiveDonutFilter] = useState('all');
 
   const menuRef = useRef(null);
 
-  // Close context menu on outside click
+  const handleToggleMenu = (e, machineId) => {
+    e.stopPropagation();
+    if (activeMenuId === machineId) {
+      setActiveMenuId(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const popoverHeight = 240;
+    const popoverWidth = 210;
+
+    let top = rect.bottom + 4;
+    if (spaceBelow < popoverHeight) {
+      top = Math.max(rect.top - popoverHeight - 4, 10);
+    }
+
+    let left = rect.right - popoverWidth;
+    if (left < 10) left = 10;
+
+    setMenuPos({ top, left });
+    setActiveMenuId(machineId);
+  };
+
+  // Close context menu on outside click or scroll
   useEffect(() => {
     const handleOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setActiveMenuId(null);
       }
     };
+    const handleScroll = () => setActiveMenuId(null);
+
     document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, []);
 
   // Fetch real backend data
@@ -331,19 +367,21 @@ export default function EnterpriseDashboard() {
       if (osStr.includes('win')) os = 'windows';
       else if (osStr.includes('ubuntu')) os = 'ubuntu';
 
-      const isOnline =
-        (m.status || m.Status || (live.cpu_usage !== undefined ? 'ONLINE' : 'OFFLINE')).toUpperCase() === 'ONLINE';
+      const statusUpper = String(m.status || m.Status || '').toUpperCase();
+      const lastSeenStr = m.last_seen || m.LastSeen;
+      const lastSeenDiff = lastSeenStr ? Math.abs(Date.now() - new Date(lastSeenStr).getTime()) : Infinity;
+      const isOnline = statusUpper === 'ONLINE' && lastSeenDiff < 120000;
 
       const rawCpu = live.cpu_usage !== undefined ? live.cpu_usage : m.cpu_usage;
       const rawMem = live.memory_usage !== undefined ? live.memory_usage : (live.memory_percent ?? m.memory_usage);
       const rawDisk = live.disk_usage !== undefined ? live.disk_usage : (live.disk_percent ?? m.disk_usage);
 
-      const cpu = rawCpu !== undefined && rawCpu !== null ? Math.round(Number(rawCpu)) : 42;
-      const memory = rawMem !== undefined && rawMem !== null ? Math.round(Number(rawMem)) : 61;
-      const disk = rawDisk !== undefined && rawDisk !== null ? Math.round(Number(rawDisk)) : 54;
+      const cpu = rawCpu !== undefined && rawCpu !== null ? Math.round(Number(rawCpu)) : null;
+      const memory = rawMem !== undefined && rawMem !== null ? Math.round(Number(rawMem)) : null;
+      const disk = rawDisk !== undefined && rawDisk !== null ? Math.round(Number(rawDisk)) : null;
 
-      const upload = Number(live.upload_mbps !== undefined ? live.upload_mbps : 0.02);
-      const download = Number(live.download_mbps !== undefined ? live.download_mbps : 0.02);
+      const upload = Number(live.upload_mbps !== undefined ? live.upload_mbps : 0);
+      const download = Number(live.download_mbps !== undefined ? live.download_mbps : 0);
 
       return {
         id: mId || `m-${idx}`,
@@ -359,12 +397,12 @@ export default function EnterpriseDashboard() {
         latency: isOnline ? `${10 + (idx * 3) % 12} ms` : '-',
         latencyTone: isOnline ? (10 + (idx * 3) % 12 > 15 ? 'amber' : 'green') : 'muted',
         status: isOnline ? 'online' : 'offline',
-        last_seen: isOnline ? '2s ago' : '2m ago',
+        last_seen: isOnline ? '2s ago' : 'Offline',
         rawLastSeen: m.last_seen || m.LastSeen || new Date().toISOString(),
       };
     });
 
-    // Enterprise Deduplication: collapse duplicates by normalized hostname, prioritizing ONLINE status and newest activity
+    // Deduplicate by normalized hostname: collapse duplicate hostnames, prioritizing active ONLINE machines with live metrics
     const dedupMap = new Map();
     formattedList.forEach((item) => {
       const key = (item.hostname || '').toLowerCase().trim();
@@ -374,8 +412,10 @@ export default function EnterpriseDashboard() {
         const existing = dedupMap.get(key);
         if (item.status === 'online' && existing.status !== 'online') {
           dedupMap.set(key, item);
-        } else if (item.status === existing.status && new Date(item.rawLastSeen) > new Date(existing.rawLastSeen)) {
-          dedupMap.set(key, item);
+        } else if (item.status === 'online' && existing.status === 'online') {
+          if ((item.cpu !== null ? 1 : 0) > (existing.cpu !== null ? 1 : 0)) {
+            dedupMap.set(key, item);
+          }
         }
       }
     });
@@ -427,11 +467,13 @@ export default function EnterpriseDashboard() {
     };
   }, [tableData]);
 
-  // Filtered Table
+  // Filtered Table (hides offline machines by default)
   const filteredMachines = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return tableData.filter((m) => {
-      if (statusFilter === 'online' && m.status !== 'online') return false;
+      if ((statusFilter === 'online' || statusFilter === 'all') && m.status !== 'online') {
+        return false;
+      }
       if (statusFilter === 'offline' && m.status !== 'offline') return false;
       if (activeDonutFilter !== 'all' && m.os !== activeDonutFilter) return false;
       if (!q) return true;
@@ -858,7 +900,7 @@ export default function EnterpriseDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredMachines.map((m) => (
+                {filteredMachines.map((m, idx) => (
                   <tr
                     key={m.id}
                     onClick={() => handleRowClick(m)}
@@ -963,10 +1005,10 @@ export default function EnterpriseDashboard() {
 
                     {/* Action Menu with Popover */}
                     <td className="actions-td" onClick={(e) => e.stopPropagation()}>
-                      <div className="menu-wrap" ref={activeMenuId === m.id ? menuRef : null}>
+                      <div className="menu-wrap">
                         <button
                           className="btn-dots-menu"
-                          onClick={() => setActiveMenuId(activeMenuId === m.id ? null : m.id)}
+                          onClick={(e) => handleToggleMenu(e, m.id)}
                           title="Host Actions"
                           type="button"
                         >
@@ -974,10 +1016,21 @@ export default function EnterpriseDashboard() {
                         </button>
 
                         {activeMenuId === m.id && (
-                          <div className="row-context-popover">
+                          <div
+                            ref={menuRef}
+                            className="row-context-popover fixed-portal-popover"
+                            style={{
+                              position: 'fixed',
+                              top: `${menuPos.top}px`,
+                              left: `${menuPos.left}px`,
+                              zIndex: 9999,
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
                             <button
                               className="popover-btn"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setActiveMenuId(null);
                                 handleRowClick(m);
                               }}
@@ -988,7 +1041,8 @@ export default function EnterpriseDashboard() {
                             </button>
                             <button
                               className="popover-btn"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setActiveMenuId(null);
                                 navigate(`/terminal?machine_id=${m.id}`);
                               }}
@@ -999,7 +1053,32 @@ export default function EnterpriseDashboard() {
                             </button>
                             <button
                               className="popover-btn"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(null);
+                                setSelectedMachineForAccess(m);
+                              }}
+                              type="button"
+                            >
+                              <ShieldCheck size={13} color="#38bdf8" />
+                              <span>Manage Access</span>
+                            </button>
+                            <button
+                              className="popover-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(null);
+                                setSelectedMachineForSecurity(m);
+                              }}
+                              type="button"
+                            >
+                              <ShieldAlert size={13} color="#f59e0b" />
+                              <span>Host Security & Hardening</span>
+                            </button>
+                            <button
+                              className="popover-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setActiveMenuId(null);
                                 navigate(`/machines/${m.id}`);
                               }}
@@ -1010,7 +1089,10 @@ export default function EnterpriseDashboard() {
                             </button>
                             <button
                               className="popover-btn"
-                              onClick={() => handleDeleteMachine(m.id, m.hostname)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMachine(m.id, m.hostname);
+                              }}
                               type="button"
                               style={{ color: '#ef4444' }}
                             >
@@ -1168,6 +1250,20 @@ export default function EnterpriseDashboard() {
         machine={selectedMachineForDrawer}
         liveMetrics={selectedMachineForDrawer ? liveMetrics[getMachineId(selectedMachineForDrawer)] : null}
         onClose={() => setSelectedMachineForDrawer(null)}
+      />
+
+      {/* ── Enterprise Host Access Control Modal ── */}
+      <HostAccessModal
+        isOpen={Boolean(selectedMachineForAccess)}
+        onClose={() => setSelectedMachineForAccess(null)}
+        machine={selectedMachineForAccess}
+      />
+
+      {/* ── Enterprise Host Security & Operations Suite Modal ── */}
+      <HostSecurityModal
+        isOpen={Boolean(selectedMachineForSecurity)}
+        onClose={() => setSelectedMachineForSecurity(null)}
+        machine={selectedMachineForSecurity}
       />
 
       <style>{`
@@ -1749,19 +1845,18 @@ export default function EnterpriseDashboard() {
           color: #cbd5e1;
         }
         .row-context-popover {
-          position: absolute;
-          right: 0;
-          top: calc(100% + 4px);
-          width: 160px;
-          background-color: #0c1220;
-          border: 1px solid #1f2e44;
-          border-radius: 8px;
-          padding: 4px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
-          z-index: 200;
+          position: fixed;
+          min-width: 210px;
+          white-space: nowrap;
+          background-color: #0b111e;
+          border: 1px solid #233550;
+          border-radius: 10px;
+          padding: 6px;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(56, 189, 248, 0.15);
+          z-index: 9999;
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 3px;
         }
         .popover-btn {
           display: flex;

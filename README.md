@@ -7,7 +7,6 @@
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![CI Status](https://img.shields.io/badge/CI-Passing-brightgreen?logo=githubactions)](.github/workflows/ci-cd.yml)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?logo=docker)](docker-compose.yml)
 [![Kubernetes](https://img.shields.io/badge/K8s-Ready-326ce5?logo=kubernetes)](k8s/)
 [![Security](https://img.shields.io/badge/Security-Passed-brightgreen?logo=trivy)](SECURITY.md)
 
@@ -78,46 +77,40 @@ Agents
 | **Real-time Stream** | WebSockets (gorilla/websocket) |
 | **Caching & Stream** | Redis 7, Redis Streams |
 | **Observability** | Prometheus, OpenTelemetry, Jaeger |
-| **Deployment** | Docker, Docker Compose, Kubernetes, Helm |
+| **Deployment** | Native Execution, Systemd, Windows Service, Kubernetes, Helm |
 
 ---
 
-## ⚡ Quick Start & Installation
+## ⚡ Quick Start & Native Execution (No Docker Required)
 
-### Option A: Docker Compose (Recommended for Testing)
+### 1-Click Dev Launcher
 
-```bash
-# Clone the repository
-git clone https://github.com/venkaiswami/infrapilot-enterprise.git
-cd infrapilot-enterprise
-
-# Launch full stack (Backend, Frontend, PostgreSQL, Redis)
-docker compose up -d
-
-# Access the dashboard at http://localhost
+#### On Windows (PowerShell):
+```powershell
+.\start-dev.ps1
 ```
 
-### Option B: Kubernetes Deployment
-
+#### On Linux / macOS (Bash):
 ```bash
-# Apply all Kubernetes production manifests
-kubectl apply -f k8s/
-
-# Verify running pods
-kubectl get pods -n infrapilot
+chmod +x ./start-dev.sh
+./start-dev.sh
 ```
 
-### Option C: Local Development
+### Manual Execution
 
 ```bash
-# Start backend
+# 1. Start Backend API
 cd backend
 go run cmd/server/main.go
 
-# Start frontend (in another terminal)
+# 2. Start Frontend UI (in a new terminal)
 cd frontend
 npm install
 npm run dev
+
+# 3. Start InfraPilot Agent (optional, in a new terminal)
+cd agent
+go run cmd/agent/main.go
 ```
 
 ---

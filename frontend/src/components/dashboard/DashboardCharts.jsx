@@ -31,14 +31,20 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
   const paddingX = 60;
   const paddingY = 40;
 
-  // Max network value in samples to scale network line
+  // Max network value in samples to scale network line (safe loop without stack overflow)
   const maxNetwork = useMemo(() => {
-    if (chartData.length === 0) return 10;
-    const maxVal = Math.max(
-      ...chartData.map(s => Number(s.upload_mbps || 0) + Number(s.download_mbps || 0)),
-      10 // baseline
-    );
-    return Math.ceil(maxVal * 1.1); // add 10% headroom
+    if (!Array.isArray(chartData) || chartData.length === 0) return 10;
+    let maxVal = 10;
+    for (let i = 0; i < chartData.length; i++) {
+      const s = chartData[i];
+      if (s) {
+        const net = Number(s.upload_mbps || 0) + Number(s.download_mbps || 0);
+        if (!isNaN(net) && net > maxVal) {
+          maxVal = net;
+        }
+      }
+    }
+    return Math.ceil(maxVal * 1.1);
   }, [chartData]);
 
   // Transform coordinates helper

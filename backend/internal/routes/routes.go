@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"infrapilot/backend/internal/ai"
 	"infrapilot/backend/internal/analytics"
 	"infrapilot/backend/internal/apm"
@@ -96,7 +97,18 @@ func Setup(r *gin.Engine, hub *websocket.Hub, eventBus *events.EventBus) {
 	tracingHandler := tracing.NewHandler(tracingService)
 	apmHandler := apm.NewHandler(apmService)
 
+	remoteDeployService := services.NewRemoteDeployService(serverService)
+	remoteDeployHandler := handlers.NewRemoteDeployHandler(remoteDeployService)
+
 	api := r.Group("/api/v1")
+	api.Use(func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		if clientIP == "192.168.1.41" || clientIP == "192.168.1.18" || clientIP == "172.22.112.255" || clientIP == "192.168.1.133" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "IP blocked by policy"})
+			return
+		}
+		c.Next()
+	})
 	api.Use(apm.APMMiddleware(apmService))
 	{
 		// Platform Self-Monitoring public health routes
@@ -120,6 +132,15 @@ func Setup(r *gin.Engine, hub *websocket.Hub, eventBus *events.EventBus) {
 		api.POST("/agent/enroll", handlers.EnrollAgent)
 		api.POST("/servers/register", serverHandler.RegisterServer)
 		api.POST("/servers/enroll", serverHandler.EnrollServer)
+
+		// Credential-Based Remote Agent Deployment & Connection Testing
+		remoteDeploy := api.Group("/agent/remote-deploy")
+		{
+			remoteDeploy.POST("/test", remoteDeployHandler.TestConnection)
+			remoteDeploy.POST("/execute", remoteDeployHandler.ExecuteDeploy)
+			remoteDeploy.GET("/history", remoteDeployHandler.GetHistory)
+			remoteDeploy.GET("/:id", remoteDeployHandler.GetDeployment)
+		}
 
 		// Public agent heartbeat endpoint
 		api.POST("/heartbeat", handlers.Heartbeat)
@@ -403,6 +424,27 @@ func Setup(r *gin.Engine, hub *websocket.Hub, eventBus *events.EventBus) {
 			protected.GET("/profile", authHandler.Profile)
 			protected.GET("/overview", handlers.EnterpriseOverview)
 			protected.GET("/dashboard/data", handlers.GetDashboardData)
+			// Enterprise Host Access Control & Machine Delegation
+			hostAccessHandler := handlers.NewHostAccessHandler(services.NewHostAccessService())
+			protected.GET("/machines/:id/access", hostAccessHandler.GetMachineAccess)
+			protected.POST("/machines/:id/access", hostAccessHandler.UpdateMachineAccess)
+			protected.DELETE("/machines/:id/access/:userId", hostAccessHandler.RevokeMachineAccess)
+			protected.GET("/servers/:id/access", hostAccessHandler.GetMachineAccess)
+			protected.POST("/servers/:id/access", hostAccessHandler.UpdateMachineAccess)
+			protected.DELETE("/servers/:id/access/:userId", hostAccessHandler.RevokeMachineAccess)
+			protected.GET("/users/me/machine-access", hostAccessHandler.GetMyMachineAccess)
+
+			// Enterprise Host Security Hardening, CIS Compliance & Remote Operations Suite
+			hostSecurityHandler := handlers.NewHostSecurityHandler(services.NewHostSecurityService(serverService))
+			protected.GET("/machines/:id/security-audit", hostSecurityHandler.GetSecurityAudit)
+			protected.POST("/machines/:id/security-audit/scan", hostSecurityHandler.RunSecurityScan)
+			protected.GET("/machines/:id/playbooks", hostSecurityHandler.ListPlaybooks)
+			protected.POST("/machines/:id/remediate", hostSecurityHandler.ExecuteRemediation)
+			protected.GET("/servers/:id/security-audit", hostSecurityHandler.GetSecurityAudit)
+			protected.POST("/servers/:id/security-audit/scan", hostSecurityHandler.RunSecurityScan)
+			protected.GET("/servers/:id/playbooks", hostSecurityHandler.ListPlaybooks)
+			protected.POST("/servers/:id/remediate", hostSecurityHandler.ExecuteRemediation)
+
 			protected.GET("/machines", machineHandler.GetMachines)
 			protected.GET("/machines/:id", machineHandler.GetMachineByID)
 			protected.PATCH("/machines/:id", machineHandler.UpdateMachine)

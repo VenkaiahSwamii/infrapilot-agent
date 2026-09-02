@@ -27,13 +27,14 @@ import {
 } from 'lucide-react';
 import { useServerStore } from '../store/serverStore.jsx';
 import { getMachineId } from '../utils/machineId.js';
+import DeployAgentModal from '../components/dashboard/DeployAgentModal.jsx';
 
 export default function AgentsPage() {
   const navigate = useNavigate();
   const { servers, liveMetricsMap, loading, fetchServers } = useServerStore();
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('online');
   const [osFilter, setOsFilter] = useState('all');
   const [copiedId, setCopiedId] = useState(null);
   const [showDeployModal, setShowDeployModal] = useState(false);
@@ -187,9 +188,9 @@ export default function AgentsPage() {
             <Bot size={20} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">TOTAL AGENTS</span>
-            <strong className="kpi-val">{totalAgents}</strong>
-            <span className="kpi-sub">Registered Daemons</span>
+            <span className="kpi-label">CONNECTED AGENTS</span>
+            <strong className="kpi-val">{connectedAgents}</strong>
+            <span className="kpi-sub">Active Connected Daemons</span>
           </div>
         </div>
 
@@ -489,178 +490,12 @@ export default function AgentsPage() {
         </table>
       </div>
 
-      {/* 5. Deploy New Agent Modal */}
-      {showDeployModal && (
-        <div className="modal-backdrop" onClick={() => setShowDeployModal(false)}>
-          <div className="deploy-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-row">
-                <Bot size={20} color="#06b6d4" />
-                <h3>Deploy InfraPilot Agent</h3>
-              </div>
-              <button className="btn-close" onClick={() => setShowDeployModal(false)} type="button">
-                <X size={18} />
-              </button>
-            </div>
-
-              <div className="modal-body">
-              <p className="modal-desc">
-                Deploy and auto-enroll the InfraPilot agent daemon onto any physical machine, VM, or container.
-              </p>
-
-              {/* Server Endpoint Configuration */}
-              <div className="endpoint-config-box">
-                <label className="endpoint-label">SERVER ENDPOINT / IP FOR AGENTS TO CONNECT TO:</label>
-                <div className="endpoint-input-row">
-                  <input
-                    type="text"
-                    className="endpoint-input"
-                    value={customEndpoint}
-                    onChange={(e) => setCustomEndpoint(e.target.value)}
-                    placeholder="e.g. 192.168.160.1 or 192.168.1.2"
-                  />
-                </div>
-                <div className="endpoint-presets">
-                  <span className="preset-hint">Quick Presets:</span>
-                  <button
-                    type="button"
-                    className={`preset-btn ${customEndpoint === '192.168.160.1' ? 'active' : ''}`}
-                    onClick={() => setCustomEndpoint('192.168.160.1')}
-                  >
-                    192.168.160.1 (VMware VM)
-                  </button>
-                  <button
-                    type="button"
-                    className={`preset-btn ${customEndpoint === '192.168.1.2' ? 'active' : ''}`}
-                    onClick={() => setCustomEndpoint('192.168.1.2')}
-                  >
-                    192.168.1.2 (Wi-Fi / LAN)
-                  </button>
-                  <button
-                    type="button"
-                    className={`preset-btn ${customEndpoint === 'localhost' ? 'active' : ''}`}
-                    onClick={() => setCustomEndpoint('localhost')}
-                  >
-                    localhost (Same Machine)
-                  </button>
-                </div>
-              </div>
-
-              <div className="deploy-tabs">
-                <button
-                  className={`tab-btn ${deployTab === 'linux' ? 'active' : ''}`}
-                  onClick={() => setDeployTab('linux')}
-                  type="button"
-                >
-                  🐧 Linux / Ubuntu / VM
-                </button>
-                <button
-                  className={`tab-btn ${deployTab === 'windows' ? 'active' : ''}`}
-                  onClick={() => setDeployTab('windows')}
-                  type="button"
-                >
-                  🪟 Windows (PowerShell)
-                </button>
-                <button
-                  className={`tab-btn ${deployTab === 'docker' ? 'active' : ''}`}
-                  onClick={() => setDeployTab('docker')}
-                  type="button"
-                >
-                  🐳 Docker Container
-                </button>
-              </div>
-
-              {(() => {
-                const targetServerUrl = getNormalizedServerUrl(customEndpoint);
-                const activeCommand =
-                  deployTab === 'linux'
-                    ? `curl -sSL ${targetServerUrl}/downloads/install.sh | bash -s ${targetServerUrl}`
-                    : deployTab === 'windows'
-                    ? `irm ${targetServerUrl}/downloads/install.ps1 | iex`
-                    : `docker run -d --name infrapilot-agent --restart always --net=host -e BACKEND_URL=${targetServerUrl} infrapilot/agent:latest`;
-
-                return (
-                  <>
-                    <div className="code-block-container">
-                      <div className="code-header">
-                        <span>ONE-LINE ENROLLMENT COMMAND</span>
-                        <button
-                          className="btn-copy-snippet"
-                          onClick={() => copyDeploySnippet(activeCommand)}
-                          type="button"
-                        >
-                          {copiedSnippet ? (
-                            <>
-                              <Check size={12} color="#22c55e" /> Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={12} /> Copy Command
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <pre className="code-content">
-                        <code>{activeCommand}</code>
-                      </pre>
-                    </div>
-
-                    {/* Direct Binary Downloads */}
-                    <div className="direct-downloads-row">
-                      <span className="downloads-label">Direct Downloads:</span>
-                      <a
-                        href={`${targetServerUrl}/downloads/infrapilot-agent.exe`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="download-link"
-                      >
-                        Windows Agent (.exe)
-                      </a>
-                      <a
-                        href={`${targetServerUrl}/downloads/infrapilot-agent-linux-amd64`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="download-link"
-                      >
-                        Linux x86_64 Binary
-                      </a>
-                      <a
-                        href={`${targetServerUrl}/downloads/install.sh`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="download-link"
-                      >
-                        install.sh
-                      </a>
-                      <a
-                        href={`${targetServerUrl}/downloads/install.ps1`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="download-link"
-                      >
-                        install.ps1
-                      </a>
-                    </div>
-                  </>
-                );
-              })()}
-
-              <div className="deploy-tips">
-                <CheckCircle2 size={15} color="#22c55e" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>
-                  The command downloads the agent, configures background daemon monitoring, and begins streaming live metrics to your dashboard automatically.
-                </span>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setShowDeployModal(false)} type="button">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 5. Deploy New Agent Modal (1-Click Push Deploy & Native Scripts) */}
+      <DeployAgentModal
+        isOpen={showDeployModal}
+        onClose={() => setShowDeployModal(false)}
+        onDeployed={() => fetchServers()}
+      />
 
       <style>{`
         .agents-page-root {

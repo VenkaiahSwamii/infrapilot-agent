@@ -51,12 +51,12 @@ func RunAPI() error {
 
 	database.Connect()
 	if err := cache.ConnectRedis(); err != nil {
-		logger.Fatal("Redis connection failed", "error", err)
-	}
-	defer cache.CloseRedis()
-
-	if err := pubsub.Initialize(); err != nil {
-		logger.Fatal("Redis Pub/Sub initialization failed", "error", err)
+		logger.Warn("Redis connection unavailable (proceeding in standalone local mode)", "error", err)
+	} else {
+		defer cache.CloseRedis()
+		if err := pubsub.Initialize(); err != nil {
+			logger.Warn("Redis Pub/Sub initialization skipped", "error", err)
+		}
 	}
 
 	EventBus = events.NewEventBus()

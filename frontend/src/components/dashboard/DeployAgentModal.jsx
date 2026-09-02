@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Copy,
@@ -10,11 +10,22 @@ import {
   ShieldCheck,
   RefreshCw,
   Key,
+  Server,
+  Zap,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle2,
+  Cpu,
+  ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import { createEnrollmentToken, listEnrollmentTokens } from '../../api/enrollment.js';
+import { testRemoteSSHConnection, executeRemoteAgentDeploy } from '../../api/remoteDeploy.js';
 
-export default function DeployAgentModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('linux');
+export default function DeployAgentModal({ isOpen, onClose, onDeployed }) {
+  const [activeTab, setActiveTab] = useState('remote'); // 'remote' | 'linux' | 'windows' | 'docker' | 'kubernetes'
   const [token, setToken] = useState('');
   const [tokenPrefix, setTokenPrefix] = useState('');
   const [loadingToken, setLoadingToken] = useState(false);
@@ -22,6 +33,26 @@ export default function DeployAgentModal({ isOpen, onClose }) {
   const [serverUrl, setServerUrl] = useState(() => {
     return window.location.origin.replace(':5173', ':8080').replace(':3000', ':8080') || 'http://localhost:8080';
   });
+
+  // Remote Push Deploy Form State
+  const [remoteHost, setRemoteHost] = useState('');
+  const [remotePort, setRemotePort] = useState(22);
+  const [remoteUser, setRemoteUser] = useState('root');
+  const [authType, setAuthType] = useState('password'); // 'password' | 'key'
+  const [remotePassword, setRemotePassword] = useState('');
+  const [remoteSSHKey, setRemoteSSHKey] = useState('');
+  const [sudoPassword, setSudoPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Testing & Execution State
+  const [testingConn, setTestingConn] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [deploying, setDeploying] = useState(false);
+  const [deployResult, setDeployResult] = useState(null);
+  const [deploySteps, setDeploySteps] = useState([]);
+  const [deployLogs, setDeployLogs] = useState([]);
+  const logsEndRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,6 +81,13 @@ export default function DeployAgentModal({ isOpen, onClose }) {
     };
   }, [isOpen]);
 
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollTop = logsEndRef.current.scrollHeight;
+    }
+  }, [deployLogs]);
+
   const generateNewToken = async () => {
     setLoadingToken(true);
     try {
@@ -69,6 +107,114 @@ export default function DeployAgentModal({ isOpen, onClose }) {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2500);
+  };
+
+  // 1. Test SSH Connection
+  const handleTestConnection = async () => {
+    if (!remoteHost.trim() || !remoteUser.trim()) {
+      setTestResult({
+        success: false,
+        error: 'Please enter target IP / Hostname and Username.',
+      });
+      return;
+    }
+
+    setTestingConn(true);
+    setTestResult(null);
+
+    try {
+      const cleanUsername = remoteUser.trim().includes('\\')
+        ? remoteUser.trim().split('\\').pop()
+        : remoteUser.trim().includes('/')
+        ? remoteUser.trim().split('/').pop()
+        : remoteUser.trim();
+
+      const res = await testRemoteSSHConnection({
+        host: remoteHost.trim(),
+        port: parseInt(remotePort, 10) || 22,
+        username: cleanUsername,
+        auth_type: authType,
+        password: remotePassword,
+        ssh_key: remoteSSHKey,
+        sudo_password: sudoPassword,
+      });
+      setTestResult(res);
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to connect to target machine';
+      const msg = err.response?.data?.message || 'Cannot reach remote host or authentication failed.';
+      setTestResult({
+        success: false,
+        message: msg,
+        error: errMsg,
+      });
+    } finally {
+      setTestingConn(false);
+    }
+  };
+
+  // 2. Execute 1-Click Remote Deployment
+  const handleExecuteDeploy = async () => {
+    if (!remoteHost.trim() || !remoteUser.trim()) {
+      setTestResult({
+        success: false,
+        error: 'Target IP Address and Username are required.',
+      });
+      return;
+    }
+
+    setDeploying(true);
+    setDeployResult(null);
+    setDeployLogs([]);
+
+    // Initialize initial steps preview
+    const initialSteps = [
+      { step_id: 1, title: 'SSH Handshake & Credential Verification', status: 'running', details: 'Connecting to target...' },
+      { step_id: 2, title: 'Target OS & Architecture Identification', status: 'pending', details: 'Waiting...' },
+      { step_id: 3, title: 'Agent Binary & Installer Provisioning', status: 'pending', details: 'Waiting...' },
+      { step_id: 4, title: 'Daemon Configuration & Service Registration', status: 'pending', details: 'Waiting...' },
+      { step_id: 5, title: 'Process Startup & Execution Verification', status: 'pending', details: 'Waiting...' },
+      { step_id: 6, title: 'Control Plane Enrollment & Heartbeat Verification', status: 'pending', details: 'Waiting...' },
+    ];
+    setDeploySteps(initialSteps);
+
+    try {
+      const res = await executeRemoteAgentDeploy({
+        host: remoteHost.trim(),
+        port: parseInt(remotePort, 10) || 22,
+        username: remoteUser.trim(),
+        auth_type: authType,
+        password: remotePassword,
+        ssh_key: remoteSSHKey,
+        sudo_password: sudoPassword,
+        server_url: serverUrl,
+        enroll_token: token || tokenPrefix,
+      });
+
+      setDeployResult(res);
+      if (res && res.steps) {
+        setDeploySteps(res.steps);
+      }
+      if (res && res.logs) {
+        setDeployLogs(res.logs);
+      }
+      if (res && res.success && onDeployed) {
+        onDeployed(res);
+      }
+    } catch (err) {
+      setDeployResult({
+        success: false,
+        error: err.message || 'Remote deployment failed.',
+      });
+      setDeploySteps((prev) =>
+        prev.map((s, idx) => (idx === 0 ? { ...s, status: 'failed', details: err.message } : s))
+      );
+    } finally {
+      setDeploying(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -141,8 +287,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
     },
   };
 
-  const currentSnippet = installSnippets[activeTab];
-
   return (
     <div className="deploy-modal-backdrop" onClick={onClose}>
       <div className="deploy-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -150,10 +294,10 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         <div className="deploy-modal-header">
           <div className="header-left">
             <div className="header-icon-badge">
-              <ShieldCheck size={22} color="#38bdf8" />
+              <Zap size={22} color="#38bdf8" />
             </div>
             <div>
-              <div className="eyebrow-tag">AGENT ENROLLMENT WIZARD</div>
+              <div className="eyebrow-tag">ENTERPRISE AGENT PROVISIONER</div>
               <h2>Deploy Monitoring Agent</h2>
             </div>
           </div>
@@ -194,8 +338,18 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           </div>
         </div>
 
-        {/* Platform OS Tabs */}
+        {/* Platform Selection Tabs */}
         <div className="deploy-platform-tabs">
+          <button
+            className={`platform-tab-btn push-deploy-btn ${activeTab === 'remote' ? 'active' : ''}`}
+            onClick={() => setActiveTab('remote')}
+            type="button"
+          >
+            <Zap size={16} color={activeTab === 'remote' ? '#38bdf8' : '#38bdf8'} />
+            <span className="bold-tab-title">1-Click Push Deploy (IP & Password)</span>
+            <span className="badge-rec">Recommended</span>
+          </button>
+
           {Object.entries(installSnippets).map(([key, config]) => {
             const Icon = config.icon;
             const isActive = activeTab === key;
@@ -213,68 +367,327 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           })}
         </div>
 
-        {/* Tab Content Body */}
-        <div className="deploy-snippet-body">
-          <div className="snippet-info">
-            <div className="info-title-row">
-              <h3>{currentSnippet.title}</h3>
-              <span className="live-status-pill">
-                <i /> Live Verified
-              </span>
-            </div>
-            <p>{currentSnippet.description}</p>
-          </div>
-
-          {/* Code Box */}
-          <div className="code-box-container">
-            <div className="code-box-header">
-              <div className="terminal-dots">
-                <span className="dot red" />
-                <span className="dot yellow" />
-                <span className="dot green" />
+        {/* Tab 1: 1-Click Remote Credential Deploy */}
+        {activeTab === 'remote' ? (
+          <div className="deploy-remote-container">
+            <div className="remote-intro-box">
+              <div className="intro-badge">
+                <Server size={15} color="#38bdf8" />
+                <span>Zero-Touch Remote Agent Provisioning</span>
               </div>
-              <span className="code-box-label">Terminal Command</span>
+              <p>
+                Provide target system credentials (IP address and SSH credentials). InfraPilot will automatically connect, install the agent daemon, and begin streaming live metrics without requiring manual login to the target machine.
+              </p>
+            </div>
+
+            {/* Credential Inputs Grid */}
+            <div className="credential-form-grid">
+              {/* Host & Port */}
+              <div className="form-group span-2">
+                <label>
+                  TARGET HOST / IP ADDRESS <span className="req">*</span>
+                </label>
+                <div className="input-with-icon">
+                  <Server size={15} className="field-icon" />
+                  <input
+                    type="text"
+                    value={remoteHost}
+                    onChange={(e) => setRemoteHost(e.target.value)}
+                    placeholder="e.g. 192.168.1.50 or ubuntu-vm.local"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>SSH PORT</label>
+                <input
+                  type="number"
+                  value={remotePort}
+                  onChange={(e) => setRemotePort(e.target.value)}
+                  placeholder="22"
+                />
+              </div>
+
+              {/* Username */}
+              <div className="form-group">
+                <label>
+                  USERNAME <span className="req">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={remoteUser}
+                  onChange={(e) => setRemoteUser(e.target.value)}
+                  placeholder="e.g. root or ubuntu"
+                />
+              </div>
+
+              {/* Auth Method Selector */}
+              <div className="form-group span-2">
+                <label>AUTHENTICATION METHOD</label>
+                <div className="auth-method-toggle">
+                  <button
+                    type="button"
+                    className={`toggle-btn ${authType === 'password' ? 'active' : ''}`}
+                    onClick={() => setAuthType('password')}
+                  >
+                    <Lock size={13} /> Password Authentication
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${authType === 'key' ? 'active' : ''}`}
+                    onClick={() => setAuthType('key')}
+                  >
+                    <Key size={13} /> SSH Private Key
+                  </button>
+                </div>
+              </div>
+
+              {/* Password or SSH Key Input */}
+              {authType === 'password' ? (
+                <div className="form-group span-3">
+                  <label>
+                    PASSWORD <span className="req">*</span>
+                  </label>
+                  <div className="input-with-icon">
+                    <Lock size={15} className="field-icon" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={remotePassword}
+                      onChange={(e) => setRemotePassword(e.target.value)}
+                      placeholder="Enter target system password"
+                    />
+                    <button
+                      type="button"
+                      className="btn-eye"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group span-3">
+                  <label>
+                    SSH PRIVATE KEY (PEM / OpenSSH) <span className="req">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={remoteSSHKey}
+                    onChange={(e) => setRemoteSSHKey(e.target.value)}
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;..."
+                    className="key-textarea"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Options Toggle */}
+            <div className="advanced-options-section">
               <button
-                className={`btn-copy-code ${copiedKey === activeTab ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(currentSnippet.command, activeTab)}
                 type="button"
+                className="btn-toggle-advanced"
+                onClick={() => setShowAdvanced(!showAdvanced)}
               >
-                {copiedKey === activeTab ? (
-                  <>
-                    <Check size={14} color="#22c55e" />
-                    <span>Copied!</span>
-                  </>
+                {showAdvanced ? '▾ Hide Advanced Options' : '▸ Show Sudo Password & Options'}
+              </button>
+
+              {showAdvanced && (
+                <div className="advanced-fields-box">
+                  <div className="form-group">
+                    <label>SUDO / ROOT PASSWORD (OPTIONAL)</label>
+                    <input
+                      type="password"
+                      value={sudoPassword}
+                      onChange={(e) => setSudoPassword(e.target.value)}
+                      placeholder="Leave blank if same as user password"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Test Connection Banner */}
+            {testResult && (
+              <div className={`connection-result-banner ${testResult.success ? 'success' : 'error'}`}>
+                {testResult.success ? (
+                  <CheckCircle2 size={20} color="#22c55e" className="flex-shrink-0" />
                 ) : (
-                  <>
-                    <Copy size={14} />
-                    <span>Copy Command</span>
-                  </>
+                  <AlertCircle size={20} color="#ef4444" className="flex-shrink-0" />
                 )}
+                <div className="result-text">
+                  <div className="result-title">
+                    {testResult.success
+                      ? `✓ SSH Connected: ${testResult.hostname || testResult.host} (${testResult.os || 'Linux'} ${testResult.arch || 'x86_64'}, ${testResult.response_time_ms || 250}ms)`
+                      : 'SSH Connection Failed'}
+                  </div>
+                  {testResult.message && <div className="result-desc">{testResult.message}</div>}
+                  {testResult.error && testResult.error !== testResult.message && (
+                    <div className="result-error-detail">
+                      <code>{testResult.error}</code>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons Row */}
+            <div className="remote-actions-bar">
+              <button
+                type="button"
+                className="btn-secondary btn-test-conn"
+                onClick={handleTestConnection}
+                disabled={testingConn || deploying}
+              >
+                <RefreshCw size={14} className={testingConn ? 'spin' : ''} />
+                <span>{testingConn ? 'Testing SSH...' : 'Test Connection'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary btn-deploy-now"
+                onClick={handleExecuteDeploy}
+                disabled={deploying || testingConn}
+              >
+                <Zap size={15} />
+                <span>{deploying ? 'Deploying Agent...' : 'Deploy Agent Now'}</span>
               </button>
             </div>
-            <pre className="code-content">
-              <code>{currentSnippet.command}</code>
-            </pre>
-          </div>
 
-          {/* Installation Steps */}
-          <div className="install-steps-list">
-            <h4>Installation Instructions:</h4>
-            <ol>
-              {currentSnippet.steps.map((step, idx) => (
-                <li key={idx}>
-                  <span className="step-num">{idx + 1}</span>
-                  <span className="step-text">{step}</span>
-                </li>
-              ))}
-            </ol>
+            {/* Live Deployment Progress Pipeline */}
+            {(deploySteps.length > 0 || deployLogs.length > 0) && (
+              <div className="deploy-progress-container">
+                <div className="progress-header">
+                  <div className="progress-title">
+                    <Zap size={15} color="#38bdf8" />
+                    <span>Deployment Pipeline Status</span>
+                  </div>
+                  {deployResult && (
+                    <span className={`deploy-status-pill ${deployResult.success ? 'success' : 'failed'}`}>
+                      {deployResult.success ? '✓ Successfully Enrolled' : '✗ Deployment Failed'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Step List */}
+                <div className="steps-list">
+                  {deploySteps.map((step) => {
+                    return (
+                      <div key={step.step_id} className={`step-item ${step.status}`}>
+                        <div className="step-indicator">
+                          {step.status === 'running' ? (
+                            <RefreshCw size={14} className="spin text-blue" />
+                          ) : step.status === 'success' ? (
+                            <CheckCircle2 size={15} className="text-green" />
+                          ) : step.status === 'failed' ? (
+                            <AlertCircle size={15} className="text-red" />
+                          ) : (
+                            <div className="step-num-dot">{step.step_id}</div>
+                          )}
+                        </div>
+                        <div className="step-content">
+                          <div className="step-title-row">
+                            <span className="step-title">{step.title}</span>
+                            {step.duration_ms > 0 && (
+                              <span className="step-dur">({step.duration_ms}ms)</span>
+                            )}
+                          </div>
+                          <span className="step-details">{step.details}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Console Log Output */}
+                {deployLogs.length > 0 && (
+                  <div className="remote-console-box">
+                    <div className="console-header">
+                      <span>Execution Logs</span>
+                      <button
+                        className="btn-copy-mini"
+                        onClick={() => copyToClipboard(deployLogs.join('\n'), 'logs')}
+                        type="button"
+                      >
+                        {copiedKey === 'logs' ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+                        <span>{copiedKey === 'logs' ? 'Copied' : 'Copy Logs'}</span>
+                      </button>
+                    </div>
+                    <div className="console-body" ref={logsEndRef}>
+                      {deployLogs.map((log, i) => (
+                        <div key={i} className={`log-line ${log.includes('[ERROR]') ? 'err' : log.includes('[SUCCESS]') ? 'succ' : ''}`}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          /* Native Manual Install Command Tabs */
+          <div className="deploy-snippet-body">
+            <div className="snippet-info">
+              <div className="info-title-row">
+                <h3>{installSnippets[activeTab].title}</h3>
+                <span className="live-status-pill">
+                  <i /> Live Verified
+                </span>
+              </div>
+              <p>{installSnippets[activeTab].description}</p>
+            </div>
+
+            {/* Code Box */}
+            <div className="code-box-container">
+              <div className="code-box-header">
+                <div className="terminal-dots">
+                  <span className="dot red" />
+                  <span className="dot yellow" />
+                  <span className="dot green" />
+                </div>
+                <span className="code-box-label">Terminal Command</span>
+                <button
+                  className={`btn-copy-code ${copiedKey === activeTab ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(installSnippets[activeTab].command, activeTab)}
+                  type="button"
+                >
+                  {copiedKey === activeTab ? (
+                    <>
+                      <Check size={14} color="#22c55e" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      <span>Copy Command</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre className="code-content">
+                <code>{installSnippets[activeTab].command}</code>
+              </pre>
+            </div>
+
+            {/* Installation Steps */}
+            <div className="install-steps-list">
+              <h4>Installation Instructions:</h4>
+              <ol>
+                {installSnippets[activeTab].steps.map((step, idx) => (
+                  <li key={idx}>
+                    <span className="step-num">{idx + 1}</span>
+                    <span className="step-text">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="deploy-modal-footer">
           <div className="footer-note">
-            <span>⚡ Host will appear online in dashboard within 3-5 seconds after starting.</span>
+            <span>⚡ Host appears online in dashboard automatically within 3-5 seconds after starting.</span>
           </div>
           <div className="footer-actions">
             <button className="btn-secondary" onClick={onClose} type="button">
@@ -288,9 +701,9 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         .deploy-modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(4, 7, 13, 0.78);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          background: rgba(4, 7, 13, 0.82);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -300,21 +713,22 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         }
         .deploy-modal-card {
           width: 100%;
-          max-width: 780px;
+          max-width: 820px;
           background: #0d1322;
           border: 1px solid #1e2d45;
           border-radius: 16px;
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(56, 189, 248, 0.15);
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(56, 189, 248, 0.15);
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          max-height: 90vh;
           animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .deploy-modal-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 24px;
+          padding: 18px 24px;
           border-bottom: 1px solid #1e2d45;
           background: linear-gradient(180deg, #111a2e 0%, #0d1322 100%);
         }
@@ -367,9 +781,9 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         }
         .deploy-meta-bar {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1.2fr 1fr;
           gap: 16px;
-          padding: 16px 24px;
+          padding: 14px 24px;
           background: #090e18;
           border-bottom: 1px solid #1e2d45;
         }
@@ -391,14 +805,11 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           background: #111a2e;
           border: 1px solid #1e2d45;
           border-radius: 8px;
-          padding: 8px 12px;
+          padding: 7px 12px;
           color: #cbd5e1;
-          font-size: 12.5px;
+          font-size: 12px;
           font-family: 'JetBrains Mono', monospace;
           outline: none;
-        }
-        .meta-field input:focus {
-          border-color: #38bdf8;
         }
         .btn-refresh-token {
           background: transparent;
@@ -409,10 +820,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           align-items: center;
           gap: 4px;
           cursor: pointer;
-          padding: 0;
-        }
-        .btn-refresh-token:hover {
-          color: #7dd3fc;
         }
         .token-display {
           display: flex;
@@ -426,29 +833,31 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         .token-display input {
           background: transparent;
           border: none;
-          padding: 8px 0;
+          padding: 7px 0;
           width: 100%;
           color: #f59e0b;
         }
         .deploy-platform-tabs {
           display: flex;
           background: #090e18;
-          padding: 0 24px;
+          padding: 0 20px;
           border-bottom: 1px solid #1e2d45;
-          gap: 8px;
+          gap: 6px;
+          overflow-x: auto;
         }
         .platform-tab-btn {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 12px 16px;
+          padding: 11px 14px;
           background: transparent;
           border: none;
           border-bottom: 2px solid transparent;
           color: #94a3b8;
-          font-size: 13px;
+          font-size: 12.5px;
           font-weight: 600;
           cursor: pointer;
+          white-space: nowrap;
           transition: all 0.15s ease;
         }
         .platform-tab-btn:hover {
@@ -459,13 +868,413 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           border-bottom-color: #38bdf8;
           background: rgba(56, 189, 248, 0.06);
         }
-        .deploy-snippet-body {
-          padding: 20px 24px;
+        .platform-tab-btn.push-deploy-btn {
+          color: #38bdf8;
+        }
+        .bold-tab-title {
+          font-weight: 700;
+        }
+        .badge-rec {
+          background: rgba(56, 189, 248, 0.15);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          font-size: 9.5px;
+          font-weight: 800;
+          padding: 1px 6px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+        .deploy-remote-container {
+          padding: 18px 24px;
           display: flex;
           flex-direction: column;
           gap: 16px;
           overflow-y: auto;
-          max-height: 55vh;
+        }
+        .remote-intro-box {
+          background: rgba(56, 189, 248, 0.05);
+          border: 1px solid rgba(56, 189, 248, 0.18);
+          border-radius: 10px;
+          padding: 12px 16px;
+        }
+        .intro-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #38bdf8;
+          margin-bottom: 4px;
+        }
+        .remote-intro-box p {
+          font-size: 12px;
+          color: #94a3b8;
+          margin: 0;
+          line-height: 1.5;
+        }
+        .credential-form-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+        .form-group.span-2 {
+          grid-column: span 2;
+        }
+        .form-group.span-3 {
+          grid-column: span 3;
+        }
+        .form-group label {
+          font-size: 10.5px;
+          font-weight: 700;
+          color: #94a3b8;
+          letter-spacing: 0.04em;
+        }
+        .form-group .req {
+          color: #ef4444;
+        }
+        .form-group input,
+        .key-textarea {
+          background: #090e18;
+          border: 1px solid #1e2d45;
+          border-radius: 8px;
+          padding: 8px 12px;
+          color: #f1f5f9;
+          font-size: 12.5px;
+          outline: none;
+          font-family: inherit;
+        }
+        .key-textarea {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11.5px;
+          resize: vertical;
+        }
+        .form-group input:focus,
+        .key-textarea:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+        }
+        .input-with-icon {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .input-with-icon input {
+          width: 100%;
+          padding-left: 32px;
+          padding-right: 32px;
+        }
+        .field-icon {
+          position: absolute;
+          left: 10px;
+          color: #64748b;
+          pointer-events: none;
+        }
+        .btn-eye {
+          position: absolute;
+          right: 8px;
+          background: transparent;
+          border: none;
+          color: #64748b;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+        }
+        .btn-eye:hover {
+          color: #cbd5e1;
+        }
+        .auth-method-toggle {
+          display: flex;
+          background: #090e18;
+          border: 1px solid #1e2d45;
+          border-radius: 8px;
+          padding: 2px;
+          gap: 4px;
+        }
+        .toggle-btn {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 6px 10px;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          color: #94a3b8;
+          font-size: 11.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .toggle-btn.active {
+          background: #1e2d45;
+          color: #38bdf8;
+        }
+        .btn-toggle-advanced {
+          background: transparent;
+          border: none;
+          color: #64748b;
+          font-size: 11.5px;
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+        }
+        .btn-toggle-advanced:hover {
+          color: #94a3b8;
+        }
+        .advanced-fields-box {
+          margin-top: 10px;
+          background: #090e18;
+          border: 1px solid #1e2d45;
+          border-radius: 8px;
+          padding: 12px;
+        }
+        .connection-result-banner {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+        }
+        .connection-result-banner.success {
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #22c55e;
+        }
+        .connection-result-banner.error {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+        .result-title {
+          font-weight: 700;
+          margin-bottom: 2px;
+        }
+        .result-desc {
+          font-size: 11.5px;
+          opacity: 0.9;
+        }
+        .result-error-detail {
+          margin-top: 6px;
+          padding: 6px 10px;
+          background: rgba(0, 0, 0, 0.35);
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          border-radius: 6px;
+        }
+        .result-error-detail code {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: #fca5a5;
+          word-break: break-all;
+        }
+        .remote-actions-bar {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 4px;
+        }
+        .btn-primary {
+          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+          color: #ffffff;
+          border: 1px solid #38bdf8;
+          border-radius: 8px;
+          padding: 9px 18px;
+          font-size: 13px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+          transition: all 0.15s ease;
+        }
+        .btn-primary:hover:not(:disabled) {
+          background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+          box-shadow: 0 6px 18px rgba(2, 132, 199, 0.4);
+        }
+        .btn-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .btn-test-conn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 16px;
+          background: #17243b;
+          border: 1px solid #233552;
+          color: #cbd5e1;
+          font-size: 12.5px;
+          font-weight: 600;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+        .btn-test-conn:hover:not(:disabled) {
+          background: #1e2d45;
+          color: #ffffff;
+        }
+        .deploy-progress-container {
+          background: #060911;
+          border: 1px solid #1e2d45;
+          border-radius: 10px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 6px;
+        }
+        .progress-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid #1e2d45;
+          padding-bottom: 10px;
+        }
+        .progress-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+        .deploy-status-pill {
+          font-size: 11px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 999px;
+        }
+        .deploy-status-pill.success {
+          background: rgba(34, 197, 94, 0.15);
+          color: #22c55e;
+          border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .deploy-status-pill.failed {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .steps-list {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+        .step-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          background: #090e18;
+          border: 1px solid #17243b;
+          border-radius: 8px;
+          padding: 8px 10px;
+        }
+        .step-item.success {
+          border-color: rgba(34, 197, 94, 0.25);
+          background: rgba(34, 197, 94, 0.04);
+        }
+        .step-item.running {
+          border-color: rgba(56, 189, 248, 0.4);
+          background: rgba(56, 189, 248, 0.06);
+        }
+        .step-item.failed {
+          border-color: rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.05);
+        }
+        .step-num-dot {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #1e2d45;
+          color: #64748b;
+          font-size: 9.5px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .step-content {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          flex: 1;
+        }
+        .step-title-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .step-title {
+          font-size: 11px;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+        .step-dur {
+          font-size: 9.5px;
+          color: #64748b;
+        }
+        .step-details {
+          font-size: 10px;
+          color: #94a3b8;
+          line-height: 1.3;
+        }
+        .remote-console-box {
+          background: #03060a;
+          border: 1px solid #1e2d45;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .console-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 10px;
+          background: #090e18;
+          border-bottom: 1px solid #1e2d45;
+          font-size: 10.5px;
+          font-weight: 700;
+          color: #64748b;
+        }
+        .btn-copy-mini {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          font-size: 10.5px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+        }
+        .btn-copy-mini:hover {
+          color: #ffffff;
+        }
+        .console-body {
+          max-height: 140px;
+          overflow-y: auto;
+          padding: 8px 10px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          line-height: 1.5;
+          color: #38bdf8;
+        }
+        .log-line.err {
+          color: #ef4444;
+        }
+        .log-line.succ {
+          color: #22c55e;
+        }
+        .deploy-snippet-body {
+          padding: 18px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          overflow-y: auto;
         }
         .snippet-info {
           display: flex;
@@ -500,10 +1309,9 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           height: 6px;
           border-radius: 50%;
           background: #22c55e;
-          box-shadow: 0 0 6px #22c55e;
         }
         .snippet-info p {
-          font-size: 12.5px;
+          font-size: 12px;
           color: #94a3b8;
           margin: 0;
         }
@@ -537,7 +1345,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           font-size: 11px;
           font-weight: 700;
           color: #64748b;
-          letter-spacing: 0.05em;
           text-transform: uppercase;
         }
         .btn-copy-code {
@@ -552,7 +1359,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
         }
         .btn-copy-code:hover {
           background: #1e2d45;
@@ -566,13 +1372,12 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
         .code-content {
           padding: 14px 16px;
           margin: 0;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+          font-family: 'JetBrains Mono', monospace;
           font-size: 12px;
           line-height: 1.6;
           color: #38bdf8;
           white-space: pre-wrap;
           word-break: break-all;
-          user-select: all;
         }
         .install-steps-list {
           display: flex;
@@ -603,7 +1408,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           gap: 10px;
           font-size: 12px;
           color: #94a3b8;
-          line-height: 1.4;
         }
         .step-num {
           width: 18px;
@@ -617,7 +1421,6 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          margin-top: 1px;
         }
         .deploy-modal-footer {
           display: flex;
@@ -640,11 +1443,13 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
         }
         .btn-secondary:hover {
           background: #2d4264;
         }
+        .text-blue { color: #38bdf8; }
+        .text-green { color: #22c55e; }
+        .text-red { color: #ef4444; }
         .spin {
           animation: spin 1s linear infinite;
         }
@@ -663,8 +1468,15 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
           .deploy-meta-bar {
             grid-template-columns: 1fr;
           }
-          .deploy-platform-tabs {
-            overflow-x: auto;
+          .credential-form-grid {
+            grid-template-columns: 1fr;
+          }
+          .form-group.span-2,
+          .form-group.span-3 {
+            grid-column: span 1;
+          }
+          .steps-list {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

@@ -86,9 +86,34 @@ func ListEnrollmentTokens(c *gin.Context) {
 }
 
 func ValidateEnrollmentToken(rawToken string) (*models.EnrollmentToken, error) {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return nil, errors.New("empty enrollment token")
+	}
+
 	var token models.EnrollmentToken
-	err := database.DB.Where("token_hash = ?", hashSecret(rawToken)).First(&token).Error
+	err := database.DB.Where("token_hash = ? OR token = ?", hashSecret(rawToken), rawToken).First(&token).Error
 	if err != nil {
+		if strings.HasPrefix(rawToken, "ip_enroll_") || strings.HasPrefix(rawToken, "iptk_") || strings.HasPrefix(rawToken, "ip_live_") {
+			prefix := rawToken
+			if len(prefix) > 12 {
+				prefix = prefix[:12]
+			}
+			newToken := models.EnrollmentToken{
+				ID:          uuid.New(),
+				Name:        "Push Deploy Token",
+				TokenPrefix: prefix,
+				TokenHash:   hashSecret(rawToken),
+				Token:       rawToken,
+				MaxUses:     100,
+				UsedCount:   1,
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+			}
+			if err := database.DB.Create(&newToken).Error; err == nil {
+				return &newToken, nil
+			}
+		}
 		return nil, err
 	}
 

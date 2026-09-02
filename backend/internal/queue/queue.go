@@ -45,6 +45,10 @@ func NewQueue() *Queue {
 
 // Publish publishes a message to a stream
 func (q *Queue) Publish(streamName string, msg *Message) error {
+	if q.redis == nil {
+		return nil
+	}
+
 	msg.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	msg.Timestamp = time.Now()
 	if msg.MaxRetries == 0 {
@@ -73,6 +77,11 @@ func (q *Queue) Publish(streamName string, msg *Message) error {
 
 // Consume consumes messages from a stream
 func (q *Queue) Consume(streamName, consumerGroup, consumerName string, batchSize int) ([]*Message, error) {
+	if q.redis == nil {
+		time.Sleep(2 * time.Second)
+		return nil, nil
+	}
+
 	ctx := context.Background()
 
 	// Create consumer group if it doesn't exist
@@ -119,19 +128,26 @@ func (q *Queue) Consume(streamName, consumerGroup, consumerName string, batchSiz
 
 // Ack acknowledges a message
 func (q *Queue) Ack(streamName, consumerGroup, messageID string) error {
+	if q.redis == nil {
+		return nil
+	}
 	ctx := context.Background()
 	return q.redis.XAck(ctx, streamName, consumerGroup, messageID).Err()
 }
 
 // Nack negatively acknowledges a message (no-op in Redis Streams - message will be redelivered after timeout)
 func (q *Queue) Nack(streamName, consumerGroup, messageID string) error {
-	// Redis Streams automatically redelivers messages after claim timeout
-	// XNack is available in Redis 7.0+ but not in go-redis v9
+	if q.redis == nil {
+		return nil
+	}
 	return nil
 }
 
 // PublishToDLQ publishes a message to the dead letter queue
 func (q *Queue) PublishToDLQ(streamName string, msg *Message) error {
+	if q.redis == nil {
+		return nil
+	}
 	dlqStream := fmt.Sprintf("%s:dlq", streamName)
 
 	dlqMsg := &Message{

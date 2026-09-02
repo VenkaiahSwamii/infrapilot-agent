@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -133,6 +134,7 @@ func Connect() {
 
 	err = db.AutoMigrate(
 		&models.User{},
+		&models.UserHostPermission{},
 		&models.EnrollmentToken{},
 		&models.Server{},
 		&models.Metric{},
@@ -272,11 +274,26 @@ func cleanupDuplicateServers(db *gorm.DB) {
 		}
 		if keeperID, exists := seen[key]; exists {
 			// Older duplicate detected: migrate any foreign key references to keeperID
-			_ = db.Exec("UPDATE metrics SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
-			_ = db.Exec("UPDATE linux_metrics SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
-			_ = db.Exec("UPDATE agent_logs SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
-			_ = db.Exec("UPDATE file_operations SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
-			_ = db.Exec("UPDATE commands SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			tablesWithMachineID := []string{"metrics", "linux_metrics", "file_operations", "commands", "alerts", "notifications"}
+			for _, tbl := range tablesWithMachineID {
+				if db.Migrator().HasTable(tbl) {
+					_ = db.Exec(fmt.Sprintf("UPDATE %s SET machine_id = ? WHERE machine_id = ?", tbl), keeperID, s.ID).Error
+				}
+			}
+
+			// Tables with server_id foreign key to servers table
+			tablesWithServerID := []string{"linux_kubernetes", "linux_dockers", "linux_processes", "linux_services", "linux_networks", "linux_storages", "linux_alerts", "linux_logs", "historical_metrics"}
+			for _, tbl := range tablesWithServerID {
+				if db.Migrator().HasTable(tbl) {
+					_ = db.Exec(fmt.Sprintf("UPDATE %s SET server_id = ? WHERE server_id = ?", tbl), keeperID, s.ID).Error
+					_ = db.Exec(fmt.Sprintf("DELETE FROM %s WHERE server_id = ?", tbl), s.ID).Error
+				}
+			}
+
+			if db.Migrator().HasTable("agent_logs") {
+				_ = db.Exec("UPDATE agent_logs SET machine_id = ? WHERE machine_id = ?", keeperID, s.ID).Error
+			}
+
 			// Delete duplicate server record
 			_ = db.Exec("DELETE FROM servers WHERE id = ?", s.ID).Error
 		} else {

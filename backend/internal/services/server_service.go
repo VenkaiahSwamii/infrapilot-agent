@@ -93,6 +93,9 @@ func (s *ServerService) PublishEvent(e events.Event) {
 }
 
 func (s *ServerService) RegisterOrUpdateServer(input RegisterServerInput) (*models.Server, error) {
+	if strings.Contains(strings.ToLower(input.Hostname), "jayathi") || input.IPAddress == "192.168.1.41" || strings.Contains(strings.ToLower(input.Hostname), "navya") || input.IPAddress == "192.168.1.18" || strings.Contains(strings.ToLower(input.Hostname), "server01") || input.IPAddress == "172.22.112.255" {
+		return nil, errors.New("host registration blocked by policy")
+	}
 	server, err := s.serverRepo.FindExistingServer(input.ID, input.Hostname, input.IPAddress, input.MACAddress)
 	if err == nil && server != nil {
 		// Update existing server record
@@ -295,12 +298,15 @@ ORDER BY CASE WHEN UPPER(m.status) = 'ONLINE' THEN 1 ELSE 2 END, m.last_seen DES
 	seenHosts := make(map[string]bool)
 
 	for _, row := range rows {
-		normHost := strings.ToLower(strings.TrimSpace(row.Hostname))
-		if normHost != "" {
-			if seenHosts[normHost] {
-				continue // Skip older duplicate
+		dedupKey := strings.TrimSpace(row.IPAddress)
+		if dedupKey == "" {
+			dedupKey = strings.ToLower(strings.TrimSpace(row.Hostname))
+		}
+		if dedupKey != "" {
+			if seenHosts[dedupKey] {
+				continue // Skip older duplicate on exact same IP
 			}
-			seenHosts[normHost] = true
+			seenHosts[dedupKey] = true
 		}
 
 		metric := models.Metric{
