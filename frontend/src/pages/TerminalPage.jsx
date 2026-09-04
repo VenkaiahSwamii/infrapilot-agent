@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Terminal, Play, Server, AlertTriangle, Cpu, Clock, RefreshCw } from 'lucide-react';
 import { listServers } from '../api/server.js';
 import { apiClient } from '../api/client.js';
 import { useDashboardStore } from '../store/dashboardStore.jsx';
+import { getMachineId } from '../utils/machineId.js';
 
 export default function TerminalPage() {
+  const [searchParams] = useSearchParams();
+  const targetMachineId = searchParams.get('machine_id') || searchParams.get('serverId') || searchParams.get('id') || '';
+
   const [servers, setServers] = useState([]);
-  const [selectedServerId, setSelectedServerId] = useState('');
+  const [selectedServerId, setSelectedServerId] = useState(targetMachineId);
   const [command, setCommand] = useState('');
   const [sessionID] = useState(() => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
   const [history, setHistory] = useState([]);
@@ -19,17 +24,47 @@ export default function TerminalPage() {
   useEffect(() => {
     listServers()
       .then(list => {
-        const onlineOnly = list.filter(s => String(s.status || '').toUpperCase() === 'ONLINE');
-        setServers(onlineOnly);
-        if (onlineOnly.length > 0) {
-          const firstId = onlineOnly[0].id || onlineOnly[0].ID || onlineOnly[0].machine_id;
+        const serverList = Array.isArray(list) ? list : [];
+        setServers(serverList);
+
+        if (targetMachineId) {
+          const match = serverList.find(s =>
+            (s.id && String(s.id).toLowerCase() === targetMachineId.toLowerCase()) ||
+            (s.hostname && String(s.hostname).toLowerCase() === targetMachineId.toLowerCase()) ||
+            getMachineId(s) === getMachineId(targetMachineId)
+          );
+          if (match) {
+            setSelectedServerId(match.id || match.ID || match.machine_id);
+          } else {
+            // Target host not yet in server list, add synthetic host option
+            const syntheticHost = {
+              id: targetMachineId,
+              hostname: targetMachineId,
+              ip_address: 'Target Host',
+              status: 'ONLINE',
+            };
+            setServers(prev => [syntheticHost, ...prev]);
+            setSelectedServerId(targetMachineId);
+          }
+        } else if (serverList.length > 0) {
+          const firstId = serverList[0].id || serverList[0].ID || serverList[0].machine_id;
           setSelectedServerId(firstId);
         }
       })
       .catch(err => {
         console.error('Failed to retrieve servers for terminal:', err);
+        if (targetMachineId) {
+          const syntheticHost = {
+            id: targetMachineId,
+            hostname: targetMachineId,
+            ip_address: 'Target Host',
+            status: 'ONLINE',
+          };
+          setServers([syntheticHost]);
+          setSelectedServerId(targetMachineId);
+        }
       });
-  }, []);
+  }, [targetMachineId]);
 
   // 2. Load command history for selected server
   const loadHistory = async (serverId) => {

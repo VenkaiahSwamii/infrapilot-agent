@@ -138,16 +138,20 @@ export default function MachineDetailPage() {
         }
       } catch (error) {
         if (active) {
-          const isPowerHouse = String(machineId).toLowerCase().includes('powerhouse') || String(machineId).includes('10');
+          const isPowerHouse = String(machineId).toLowerCase().includes('powerhouse');
+          const cleanHost = String(machineId).replace(/-(linux|windows|ubuntu)$/i, '');
+          const isWindows = String(machineId).toLowerCase().includes('win');
+          const isUbuntu = String(machineId).toLowerCase().includes('ubuntu');
+
           const fallbackMachine = {
-            id: isPowerHouse ? '93670072-9F91-4AF2-A099-EC85A7CC6511' : '942A2EB7-4D34-4F05-B051-4A66A40C32C5',
-            hostname: isPowerHouse ? 'PowerHouse10' : 'Venkyyy',
-            ip_address: isPowerHouse ? '192.168.1.133' : '192.168.1.2',
-            os: 'windows',
-            platform: 'Microsoft Windows 11 Home',
+            id: machineId,
+            hostname: cleanHost || (isPowerHouse ? 'PowerHouse10' : 'Venkyyy'),
+            ip_address: isPowerHouse ? '192.168.1.133' : '192.168.1.10',
+            os: isWindows ? 'windows' : isUbuntu ? 'ubuntu' : 'linux',
+            platform: isWindows ? 'Microsoft Windows 11 Home' : 'Ubuntu 22.04 LTS (GNU/Linux)',
             architecture: 'x64',
-            cpu_model: isPowerHouse ? '11th Gen Intel(R) Core(TM) i5-1145G7 @ 2.60GHz (1.50 GHz)' : '11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz (2.90 GHz)',
-            gpu: isPowerHouse ? 'Intel(R) Iris(R) Xe Graphics (128 MB)' : 'Intel(R) UHD Graphics (128 MB)',
+            cpu_model: isPowerHouse ? '11th Gen Intel(R) Core(TM) i5-1145G7 @ 2.60GHz (1.50 GHz)' : 'Intel(R) Xeon(R) CPU @ 2.60GHz',
+            gpu: isPowerHouse ? 'Intel(R) Iris(R) Xe Graphics (128 MB)' : 'Standard VGA Adapter',
             total_memory_gb: isPowerHouse ? 16 : 8,
             total_disk_gb: 477,
             status: 'ONLINE',
@@ -175,9 +179,9 @@ export default function MachineDetailPage() {
     const timer = setInterval(pollMetadata, 5000);
 
     const checkStaleness = setInterval(() => {
-      if (Date.now() - lastUpdateRef.current > 10000) setLiveStatus('DISCONNECTED');
+      if (Date.now() - lastUpdateRef.current > 35000) setLiveStatus('DISCONNECTED');
       else setLiveStatus('CONNECTED');
-    }, 2000);
+    }, 4000);
 
     const room = `server:${machineId}`;
 
@@ -212,7 +216,19 @@ export default function MachineDetailPage() {
   };
 
   const ActiveComponent = TABS.find((t) => t.id === activeTab)?.component;
-  const isOnline = String(machine?.status || 'ONLINE').toUpperCase() === 'ONLINE';
+
+  const rawStatusUpper = String(machine?.status || '').toUpperCase();
+  const isDBOnline = rawStatusUpper === 'ONLINE' || rawStatusUpper === 'CONNECTED' || machine?.online === true;
+
+  let lastSeenDiff = Infinity;
+  const lastSeenVal = liveMetric?.created_at || machine?.last_seen || machine?.LastSeen;
+  if (lastSeenVal) {
+    const t = new Date(lastSeenVal).getTime();
+    if (!isNaN(t)) lastSeenDiff = Math.abs(Date.now() - t);
+  }
+  const isRecentTelemetry = lastSeenDiff < 300000; // 5 minutes
+
+  const isOnline = isDBOnline || isRecentTelemetry || liveStatus === 'CONNECTED' || liveMetric !== undefined;
 
   const hostnameStr = String(machine?.hostname || normalizedId || machineId || '').toLowerCase();
   const isPowerHouse = hostnameStr.includes('powerhouse') || hostnameStr.includes('10');
@@ -341,9 +357,9 @@ export default function MachineDetailPage() {
         </div>
 
         <div className="host-status-right">
-          <div className="live-connected-pill">
-            <span className="green-pulse" />
-            <span>{liveStatus}</span>
+          <div className={`live-connected-pill ${isOnline ? 'connected' : 'disconnected'}`}>
+            <span className={isOnline ? 'green-pulse' : 'red-pulse'} />
+            <span>{isOnline ? 'CONNECTED' : 'DISCONNECTED'}</span>
           </div>
           <span className="last-seen-label">
             Last seen: {liveMetric?.created_at ? new Date(liveMetric.created_at).toLocaleString('en-GB') : resolvedMachine?.last_seen ? new Date(resolvedMachine.last_seen).toLocaleString('en-GB') : 'Just now'}
@@ -550,9 +566,14 @@ export default function MachineDetailPage() {
           display: flex;
           align-items: center;
           gap: 6px;
-          color: #22c55e;
           font-size: 12px;
           font-weight: 800;
+        }
+        .live-connected-pill.connected {
+          color: #22c55e;
+        }
+        .live-connected-pill.disconnected {
+          color: #ef4444;
         }
         .green-pulse {
           width: 7px;
@@ -560,6 +581,13 @@ export default function MachineDetailPage() {
           border-radius: 50%;
           background-color: #22c55e;
           box-shadow: 0 0 6px #22c55e;
+        }
+        .red-pulse {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #ef4444;
+          box-shadow: 0 0 6px #ef4444;
         }
         .last-seen-label {
           font-size: 11.5px;

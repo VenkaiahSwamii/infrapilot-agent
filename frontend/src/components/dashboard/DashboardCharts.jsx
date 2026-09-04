@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Cpu, HardDrive, Network, Layers, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Cpu, HardDrive, Network, Layers, Activity, Zap, TrendingUp, RefreshCw } from 'lucide-react';
 
 export default function DashboardCharts({ samples = [], range = '1h', onRangeChange }) {
   const [activeMetrics, setActiveMetrics] = useState({
@@ -25,13 +25,44 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
     });
   }, [samples]);
 
-  // 2. Math parameters
+  // Summary Metrics Calculation
+  const stats = useMemo(() => {
+    if (chartData.length === 0) {
+      return { peakCpu: 0, avgMem: 0, maxNet: 0, currentDisk: 0 };
+    }
+
+    let peakCpu = 0;
+    let sumMem = 0;
+    let maxNet = 0;
+    let currentDisk = 0;
+
+    chartData.forEach((s) => {
+      const cpu = s.cpu_usage ?? s.cpu ?? 0;
+      const mem = s.memory_usage ?? s.memory ?? 0;
+      const disk = s.disk_usage ?? s.disk ?? 0;
+      const net = Number(s.upload_mbps || 0) + Number(s.download_mbps || 0);
+
+      if (cpu > peakCpu) peakCpu = cpu;
+      sumMem += mem;
+      if (net > maxNet) maxNet = net;
+      currentDisk = disk;
+    });
+
+    return {
+      peakCpu: peakCpu.toFixed(1),
+      avgMem: (sumMem / chartData.length).toFixed(1),
+      maxNet: maxNet.toFixed(1),
+      currentDisk: currentDisk.toFixed(1),
+    };
+  }, [chartData]);
+
+  // Math parameters
   const width = 800;
   const height = 280;
   const paddingX = 60;
   const paddingY = 40;
 
-  // Max network value in samples to scale network line (safe loop without stack overflow)
+  // Max network value in samples to scale network line
   const maxNetwork = useMemo(() => {
     if (!Array.isArray(chartData) || chartData.length === 0) return 10;
     let maxVal = 10;
@@ -44,7 +75,7 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
         }
       }
     }
-    return Math.ceil(maxVal * 1.1);
+    return Math.ceil(maxVal * 1.15);
   }, [chartData]);
 
   // Transform coordinates helper
@@ -53,10 +84,8 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
     
     const count = chartData.length;
     return chartData.map((sample, idx) => {
-      // X coordinate spaced evenly
       const x = paddingX + (idx / Math.max(1, count - 1)) * (width - 2 * paddingX);
       
-      // Get raw value
       let val = 0;
       let max = 100;
       if (metricKey === 'cpu') val = sample.cpu_usage ?? sample.cpu ?? 0;
@@ -67,10 +96,7 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
         max = maxNetwork;
       }
       
-      // Clip value
       val = Math.max(0, Math.min(val, max));
-      
-      // Y coordinate (SVG starts at top left, so we invert)
       const y = height - paddingY - (val / max) * (height - 2 * paddingY);
       
       return { x, y, value: val };
@@ -112,21 +138,16 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
     const clientX = e.clientX - rect.left;
     const clientY = e.clientY - rect.top;
 
-    // Scale back to viewBox coordinates (0 to 800 width)
     const svgX = (clientX / rect.width) * width;
-    
-    // Find closest data point index based on x position
     const step = (width - 2 * paddingX) / Math.max(1, chartData.length - 1);
     let index = Math.round((svgX - paddingX) / step);
     index = Math.max(0, Math.min(index, chartData.length - 1));
     
     setHoverIndex(index);
-    
-    // Position tooltip
     const actualX = paddingX + index * step;
     setTooltipPos({
-      x: (actualX / width) * rect.width,
-      y: (clientY / rect.height) * rect.height - 80,
+      x: Math.min(Math.max((actualX / width) * rect.width, 10), rect.width - 180),
+      y: (clientY / rect.height) * rect.height - 90,
     });
   };
 
@@ -168,8 +189,11 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
     <section className="chart-panel">
       <div className="chart-head">
         <div className="chart-title-area">
-          <span className="eyebrow">WebSocket Stream</span>
-          <h2>Resource History</h2>
+          <div className="live-stream-badge">
+            <span className="pulse-dot" />
+            <span>REALTIME TELEMETRY STREAM</span>
+          </div>
+          <h2>Resource Performance History</h2>
         </div>
 
         <div className="chart-controls">
@@ -189,53 +213,72 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
         </div>
       </div>
 
-      {/* KPI Toggles */}
+      {/* Metric KPI Selector Cards */}
       <div className="metric-selectors">
         <button
           className={`selector-btn cpu ${activeMetrics.cpu ? 'active' : ''}`}
           onClick={() => toggleMetric('cpu')}
           type="button"
         >
-          <span className="bullet-cpu" />
-          <Cpu size={14} />
-          <span>CPU Usage</span>
+          <div className="selector-icon-wrap cpu">
+            <Cpu size={14} />
+          </div>
+          <div className="selector-label-group">
+            <span className="selector-name">CPU Usage</span>
+            <span className="selector-stat">{stats.peakCpu}% peak</span>
+          </div>
         </button>
+
         <button
           className={`selector-btn memory ${activeMetrics.memory ? 'active' : ''}`}
           onClick={() => toggleMetric('memory')}
           type="button"
         >
-          <span className="bullet-mem" />
-          <Layers size={14} />
-          <span>Memory Usage</span>
+          <div className="selector-icon-wrap mem">
+            <Layers size={14} />
+          </div>
+          <div className="selector-label-group">
+            <span className="selector-name">Memory Usage</span>
+            <span className="selector-stat">{stats.avgMem}% avg</span>
+          </div>
         </button>
+
         <button
           className={`selector-btn disk ${activeMetrics.disk ? 'active' : ''}`}
           onClick={() => toggleMetric('disk')}
           type="button"
         >
-          <span className="bullet-disk" />
-          <HardDrive size={14} />
-          <span>Disk Usage</span>
+          <div className="selector-icon-wrap disk">
+            <HardDrive size={14} />
+          </div>
+          <div className="selector-label-group">
+            <span className="selector-name">Disk Usage</span>
+            <span className="selector-stat">{stats.currentDisk}% used</span>
+          </div>
         </button>
+
         <button
           className={`selector-btn network ${activeMetrics.network ? 'active' : ''}`}
           onClick={() => toggleMetric('network')}
           type="button"
         >
-          <span className="bullet-net" />
-          <Network size={14} />
-          <span>Network Speed</span>
+          <div className="selector-icon-wrap net">
+            <Network size={14} />
+          </div>
+          <div className="selector-label-group">
+            <span className="selector-name">Network Throughput</span>
+            <span className="selector-stat">{stats.maxNet} Mb/s</span>
+          </div>
         </button>
       </div>
 
-      {/* Main SVG Graph */}
+      {/* Main SVG Graph Container */}
       <div className="svg-container" style={{ position: 'relative' }}>
         {chartData.length === 0 ? (
           <div className="chart-placeholder">
-            <Activity className="pulse-slow" size={32} />
+            <Activity className="pulse-slow" size={36} color="#38bdf8" />
             <strong>Awaiting Telemetry Ingestion...</strong>
-            <p>Historical agent metrics will draw here in real-time.</p>
+            <p>Live resource metrics stream automatically every 5s from active agents.</p>
           </div>
         ) : (
           <svg
@@ -245,11 +288,11 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
-            {/* Definitions for gradients */}
+            {/* Definitions for smooth gradients and line glows */}
             <defs>
               <linearGradient id="cpu-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
               </linearGradient>
               <linearGradient id="mem-grad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
@@ -260,9 +303,16 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
                 <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
               </linearGradient>
               <linearGradient id="net-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#a855f7" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.0" />
               </linearGradient>
+
+              <filter id="glow-cpu" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#38bdf8" floodOpacity="0.4" />
+              </filter>
+              <filter id="glow-mem" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#22c55e" floodOpacity="0.4" />
+              </filter>
             </defs>
 
             {/* Horizontal Grid lines */}
@@ -276,16 +326,17 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
                     y1={y}
                     x2={width - paddingX}
                     y2={y}
-                    stroke="#1f2e44"
+                    stroke="#1e2d45"
                     strokeWidth="1"
                     strokeDasharray="4 4"
                   />
                   {/* Left percentages Y-axis */}
                   <text
-                    x={paddingX - 10}
+                    x={paddingX - 12}
                     y={y + 4}
                     fill="#64748b"
                     fontSize="11"
+                    fontWeight="600"
                     textAnchor="end"
                   >
                     {val}%
@@ -293,10 +344,11 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
                   {/* Right Mbps Y-axis */}
                   {activeMetrics.network && (
                     <text
-                      x={width - paddingX + 10}
+                      x={width - paddingX + 12}
                       y={y + 4}
-                      fill="#a78bfa"
+                      fill="#a855f7"
                       fontSize="11"
+                      fontWeight="600"
                       textAnchor="start"
                     >
                       {Math.round((maxNetwork - ratio * maxNetwork))} Mb/s
@@ -317,15 +369,16 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
                     y1={paddingY}
                     x2={x}
                     y2={height - paddingY}
-                    stroke="#1f2e44"
+                    stroke="#1e2d45"
                     strokeWidth="1"
-                    opacity="0.5"
+                    opacity="0.4"
                   />
                   <text
                     x={x}
-                    y={height - paddingY + 20}
+                    y={height - paddingY + 22}
                     fill="#64748b"
                     fontSize="11"
+                    fontWeight="600"
                     textAnchor="middle"
                   >
                     {tick}
@@ -345,28 +398,27 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
             {activeMetrics.network && lines.network.length > 0 && (
               <>
                 <path d={getAreaString(lines.network)} fill="url(#net-grad)" />
-                <path d={getPathString(lines.network)} fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" />
+                <path d={getPathString(lines.network)} fill="none" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" />
               </>
             )}
 
             {activeMetrics.memory && lines.memory.length > 0 && (
               <>
                 <path d={getAreaString(lines.memory)} fill="url(#mem-grad)" />
-                <path d={getPathString(lines.memory)} fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" />
+                <path d={getPathString(lines.memory)} fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow-mem)" />
               </>
             )}
 
             {activeMetrics.cpu && lines.cpu.length > 0 && (
               <>
                 <path d={getAreaString(lines.cpu)} fill="url(#cpu-grad)" />
-                <path d={getPathString(lines.cpu)} fill="none" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" />
+                <path d={getPathString(lines.cpu)} fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow-cpu)" />
               </>
             )}
 
-            {/* Hover indicator line & points */}
+            {/* Hover indicator line & point markers */}
             {hoverIndex !== null && (
               <>
-                {/* Vertical marker line */}
                 <line
                   x1={paddingX + (hoverIndex / Math.max(1, chartData.length - 1)) * (width - 2 * paddingX)}
                   y1={paddingY}
@@ -374,27 +426,27 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
                   y2={height - paddingY}
                   stroke="#38bdf8"
                   strokeWidth="1.5"
+                  strokeDasharray="2 2"
                 />
 
-                {/* Bullets on data points */}
                 {activeMetrics.cpu && lines.cpu[hoverIndex] && (
-                  <circle cx={lines.cpu[hoverIndex].x} cy={lines.cpu[hoverIndex].y} r="5" fill="#06b6d4" stroke="#080c14" strokeWidth="2" />
+                  <circle cx={lines.cpu[hoverIndex].x} cy={lines.cpu[hoverIndex].y} r="5" fill="#38bdf8" stroke="#090e17" strokeWidth="2.5" />
                 )}
                 {activeMetrics.memory && lines.memory[hoverIndex] && (
-                  <circle cx={lines.memory[hoverIndex].x} cy={lines.memory[hoverIndex].y} r="5" fill="#22c55e" stroke="#080c14" strokeWidth="2" />
+                  <circle cx={lines.memory[hoverIndex].x} cy={lines.memory[hoverIndex].y} r="5" fill="#22c55e" stroke="#090e17" strokeWidth="2.5" />
                 )}
                 {activeMetrics.disk && lines.disk[hoverIndex] && (
-                  <circle cx={lines.disk[hoverIndex].x} cy={lines.disk[hoverIndex].y} r="5" fill="#f59e0b" stroke="#080c14" strokeWidth="2" />
+                  <circle cx={lines.disk[hoverIndex].x} cy={lines.disk[hoverIndex].y} r="5" fill="#f59e0b" stroke="#090e17" strokeWidth="2.5" />
                 )}
                 {activeMetrics.network && lines.network[hoverIndex] && (
-                  <circle cx={lines.network[hoverIndex].x} cy={lines.network[hoverIndex].y} r="5" fill="#a78bfa" stroke="#080c14" strokeWidth="2" />
+                  <circle cx={lines.network[hoverIndex].x} cy={lines.network[hoverIndex].y} r="5" fill="#a855f7" stroke="#090e17" strokeWidth="2.5" />
                 )}
               </>
             )}
           </svg>
         )}
 
-        {/* Live Hover Tooltip Panel */}
+        {/* Floating Tooltip Box */}
         {hoverIndex !== null && chartData[hoverIndex] && (
           <div
             className="chart-tooltip"
@@ -406,7 +458,7 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
             }}
           >
             <div className="tooltip-time">
-              {new Date(chartData[hoverIndex].timestamp || chartData[hoverIndex].created_at).toLocaleTimeString()}
+              ⏱ {new Date(chartData[hoverIndex].timestamp || chartData[hoverIndex].created_at).toLocaleTimeString()}
             </div>
             <div className="tooltip-rows">
               {activeMetrics.cpu && (
@@ -449,25 +501,50 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
 
       <style>{`
         .chart-panel {
-          background-color: #0d1220;
-          border: 1px solid #1f2e44;
-          border-radius: 12px;
+          background: #0d1322;
+          border: 1px solid #1e2d45;
+          border-radius: 16px;
           padding: 24px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 18px;
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
         }
         .chart-head {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           flex-wrap: wrap;
-          gap: 12px;
+          gap: 14px;
+        }
+        .live-stream-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 800;
+          color: #38bdf8;
+          letter-spacing: 0.08em;
+          margin-bottom: 4px;
+        }
+        .pulse-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #22c55e;
+          box-shadow: 0 0 8px #22c55e;
+          animation: pulse-glow 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse-glow {
+          0% { opacity: 0.4; transform: scale(0.9); }
+          50% { opacity: 1; transform: scale(1.25); }
+          100% { opacity: 0.4; transform: scale(0.9); }
         }
         .chart-title-area h2 {
           font-size: 18px;
           font-weight: 700;
-          color: #f1f5f9;
+          color: #ffffff;
+          margin: 0;
         }
         .chart-controls {
           display: flex;
@@ -476,78 +553,96 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
         }
         .range-selector {
           display: flex;
-          background-color: #080c14;
-          border: 1px solid #1f2e44;
-          border-radius: 8px;
+          background-color: #090e18;
+          border: 1px solid #1e2d45;
+          border-radius: 10px;
           padding: 3px;
         }
         .range-btn {
           background: none;
           border: none;
-          color: #64748b;
+          color: #94a3b8;
           font-size: 12px;
           font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 6px;
-          transition: all 0.2s;
+          padding: 6px 14px;
+          border-radius: 8px;
+          transition: all 0.15s ease;
           cursor: pointer;
         }
         .range-btn:hover {
-          color: #cbd5e1;
+          color: #ffffff;
         }
         .range-btn.active {
-          background-color: #1f2e44;
-          color: #06b6d4;
+          background-color: #17243b;
+          color: #38bdf8;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
         .metric-selectors {
-          display: flex;
-          flex-wrap: wrap;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
           gap: 12px;
-          margin-bottom: 8px;
         }
         .selector-btn {
           display: flex;
           align-items: center;
-          gap: 8px;
-          background-color: #080c14;
-          border: 1px solid #1f2e44;
+          gap: 12px;
+          background-color: #090e18;
+          border: 1px solid #1e2d45;
           color: #94a3b8;
-          padding: 8px 14px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          transition: all 0.2s;
+          padding: 10px 14px;
+          border-radius: 12px;
+          transition: all 0.2s ease;
           cursor: pointer;
+          text-align: left;
         }
         .selector-btn:hover {
-          color: #e2e8f0;
-          border-color: #2e3f5a;
+          color: #ffffff;
+          border-color: #2b3d5c;
+          transform: translateY(-1px);
         }
         .selector-btn.active {
-          color: #f1f5f9;
+          color: #ffffff;
+          border-color: #38bdf8;
+          background: #111a2e;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
         }
-        .selector-btn.cpu.active { border-color: #06b6d4; background-color: rgba(6, 182, 212, 0.05); }
-        .selector-btn.memory.active { border-color: #22c55e; background-color: rgba(34, 197, 150, 0.05); }
-        .selector-btn.disk.active { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
-        .selector-btn.network.active { border-color: #a78bfa; background-color: rgba(167, 139, 250, 0.05); }
-        
-        .bullet-cpu, .bullet-mem, .bullet-disk, .bullet-net {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          display: inline-block;
+        .selector-icon-wrap {
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
         }
-        .bullet-cpu { background-color: #06b6d4; }
-        .bullet-mem { background-color: #22c55e; }
-        .bullet-disk { background-color: #f59e0b; }
-        .bullet-net { background-color: #a78bfa; }
+        .selector-icon-wrap.cpu { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
+        .selector-icon-wrap.mem { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
+        .selector-icon-wrap.disk { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+        .selector-icon-wrap.net { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+
+        .selector-label-group {
+          display: flex;
+          flex-direction: column;
+        }
+        .selector-name {
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .selector-stat {
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .selector-btn.active .selector-stat {
+          color: #94a3b8;
+        }
 
         .svg-container {
-          background-color: #080c14;
-          border: 1px solid rgba(31, 46, 68, 0.5);
-          border-radius: 10px;
+          background-color: #090e18;
+          border: 1px solid #1e2d45;
+          border-radius: 12px;
           padding: 16px 8px;
-          min-height: 250px;
+          min-height: 260px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -561,43 +656,47 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           color: #64748b;
           text-align: center;
+          padding: 30px 20px;
         }
         .chart-placeholder strong {
-          color: #94a3b8;
+          color: #cbd5e1;
           font-size: 14px;
         }
         .chart-placeholder p {
           font-size: 12px;
-          max-width: 320px;
+          max-width: 340px;
+          color: #64748b;
+          margin: 0;
         }
         .pulse-slow {
           animation: pulse-op 2s infinite ease-in-out;
         }
         @keyframes pulse-op {
-          0% { opacity: 0.3; }
-          50% { opacity: 0.8; }
-          100% { opacity: 0.3; }
+          0% { opacity: 0.3; transform: scale(0.96); }
+          50% { opacity: 0.95; transform: scale(1.04); }
+          100% { opacity: 0.3; transform: scale(0.96); }
         }
 
         /* Tooltip Panel */
         .chart-tooltip {
-          background-color: #0d1220;
-          border: 1px solid #1f2e44;
-          border-radius: 8px;
+          background-color: #0d1322;
+          border: 1px solid #2b3d5c;
+          border-radius: 10px;
           padding: 10px 14px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-          min-width: 140px;
-          z-index: 10;
+          box-shadow: 0 14px 35px rgba(0, 0, 0, 0.7);
+          min-width: 150px;
+          z-index: 20;
+          backdrop-filter: blur(8px);
         }
         .tooltip-time {
           font-size: 11px;
           font-weight: 700;
-          color: #64748b;
+          color: #94a3b8;
           margin-bottom: 6px;
-          border-bottom: 1px solid #1f2e44;
+          border-bottom: 1px solid #1e2d45;
           padding-bottom: 4px;
         }
         .tooltip-rows {
@@ -613,18 +712,18 @@ export default function DashboardCharts({ samples = [], range = '1h', onRangeCha
           color: #cbd5e1;
         }
         .tooltip-row .dot {
-          width: 6px;
-          height: 6px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
         }
         .tooltip-row strong {
           margin-left: auto;
-          color: #f1f5f9;
+          color: #ffffff;
         }
-        .tooltip-row.cpu .dot { background-color: #06b6d4; }
+        .tooltip-row.cpu .dot { background-color: #38bdf8; }
         .tooltip-row.mem .dot { background-color: #22c55e; }
         .tooltip-row.disk .dot { background-color: #f59e0b; }
-        .tooltip-row.net .dot { background-color: #a78bfa; }
+        .tooltip-row.net .dot { background-color: #a855f7; }
       `}</style>
     </section>
   );

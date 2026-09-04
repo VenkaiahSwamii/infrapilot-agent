@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"infrapilot/agent/internal/metrics"
@@ -113,18 +114,20 @@ func GetMetrics() (*metrics.Metrics, error) {
 
 	var totalDiskBytes uint64 = 0
 	var usedDiskBytes uint64 = 0
-	for _, fs := range filesystems {
-		totalDiskBytes += fs.Total
-		usedDiskBytes += fs.Used
-	}
+	var diskPercent float64 = 0.0
 
-	diskPercent := 0.0
-	if totalDiskBytes > 0 {
-		diskPercent = (float64(usedDiskBytes) / float64(totalDiskBytes)) * 100.0
-	} else if diskInfo != nil && diskInfo.Total > 0 {
+	if diskInfo != nil && diskInfo.Total > 0 {
 		totalDiskBytes = diskInfo.Total
 		usedDiskBytes = diskInfo.Used
 		diskPercent = diskInfo.UsedPercent
+	} else if len(filesystems) > 0 {
+		for _, fs := range filesystems {
+			totalDiskBytes += fs.Total
+			usedDiskBytes += fs.Used
+		}
+		if totalDiskBytes > 0 {
+			diskPercent = (float64(usedDiskBytes) / float64(totalDiskBytes)) * 100.0
+		}
 	}
 
 	cpuFrequency := 0.0
@@ -198,6 +201,32 @@ func GetMetrics() (*metrics.Metrics, error) {
 	}, nil
 }
 
+func isIgnoredFilesystem(mountpoint, fstype string) bool {
+	m := strings.ToLower(mountpoint)
+	fs := strings.ToLower(fstype)
+
+	ignoredTypes := map[string]bool{
+		"tmpfs": true, "devtmpfs": true, "sysfs": true, "proc": true, "procfs": true,
+		"cgroup": true, "cgroup2": true, "squashfs": true, "snapfuse": true, "overlay": true,
+		"rpc_pipefs": true, "autofs": true, "devpts": true, "configfs": true, "debugfs": true,
+		"securityfs": true, "tracefs": true, "hugetlbfs": true, "mqueue": true, "pstore": true,
+		"bpf": true, "none": true,
+	}
+
+	if ignoredTypes[fs] {
+		return true
+	}
+
+	if strings.HasPrefix(m, "/sys") || strings.HasPrefix(m, "/proc") ||
+		strings.HasPrefix(m, "/dev") || strings.HasPrefix(m, "/run") ||
+		strings.HasPrefix(m, "/snap") || strings.HasPrefix(m, "/mnt/wsl") ||
+		strings.HasPrefix(m, "/usr/lib/wsl") || strings.HasPrefix(m, "/init") {
+		return true
+	}
+
+	return false
+}
+
 func collectFilesystems() []metrics.FilesystemMetric {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
@@ -205,9 +234,19 @@ func collectFilesystems() []metrics.FilesystemMetric {
 	}
 
 	result := make([]metrics.FilesystemMetric, 0, len(partitions))
+	seenMounts := make(map[string]bool)
+
 	for _, partition := range partitions {
+		if isIgnoredFilesystem(partition.Mountpoint, partition.Fstype) {
+			continue
+		}
+		if seenMounts[partition.Mountpoint] {
+			continue
+		}
+		seenMounts[partition.Mountpoint] = true
+
 		usage, err := disk.Usage(partition.Mountpoint)
-		if err != nil {
+		if err != nil || usage.Total == 0 {
 			continue
 		}
 		result = append(result, metrics.FilesystemMetric{

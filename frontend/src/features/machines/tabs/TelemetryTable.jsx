@@ -29,8 +29,8 @@ export default function TelemetryTable({ machineId, load, selectRows = identityR
     };
   }, [load, machineId, selectRows]);
 
-  if (error) return <div className="tab-empty">Unable to load telemetry: {error}</div>;
-  if (rows.length === 0) return <div className="tab-empty">N/A</div>;
+  if (error) return <div className="tab-empty" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Unable to load telemetry: {error}</div>;
+  if (rows.length === 0) return <div className="tab-empty" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>No telemetry data collected for this machine.</div>;
 
   const columns = Object.keys(rows[0]).filter((key) => !['id', 'machine_id'].includes(key));
   return (

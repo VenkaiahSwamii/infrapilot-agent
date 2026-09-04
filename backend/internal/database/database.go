@@ -220,6 +220,7 @@ func Connect() {
 		&models.FileOperation{},
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
+		&models.RemoteDeploymentRecord{},
 	)
 
 	if err != nil {

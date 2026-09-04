@@ -219,3 +219,32 @@ const (
 	TriggerTypeManual   = "manual"
 	TriggerTypeAPI      = "api"
 )
+
+// RemoteDeploymentRecord stores persistent history of 1-click remote agent push deployments
+type RemoteDeploymentRecord struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	DeploymentID string    `gorm:"type:varchar(64);uniqueIndex" json:"deployment_id"`
+	Host         string    `gorm:"type:varchar(255);not null" json:"host"`
+	Port         int       `gorm:"default:22" json:"port"`
+	Username     string    `gorm:"type:varchar(255)" json:"username"`
+	AuthType     string    `gorm:"type:varchar(32)" json:"auth_type"`
+	TargetOS     string    `gorm:"type:varchar(32)" json:"target_os"`
+	Status       string    `gorm:"type:varchar(32);default:pending" json:"status"` // pending, running, success, failed
+	Hostname     string    `gorm:"type:varchar(255)" json:"hostname"`
+	MachineID    string    `gorm:"type:varchar(64)" json:"machine_id,omitempty"`
+	APIKey       string    `gorm:"type:varchar(255)" json:"api_key,omitempty"`
+	TotalTimeMs  int64     `json:"total_time_ms"`
+	StepsJSON    string    `gorm:"type:text" json:"steps_json,omitempty"`
+	LogsJSON     string    `gorm:"type:text" json:"logs_json,omitempty"`
+	ErrorMessage string    `gorm:"type:text" json:"error_message,omitempty"`
+	Organization string    `gorm:"default:Default Organization" json:"organization"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (r *RemoteDeploymentRecord) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+	return nil
+}

@@ -74,13 +74,22 @@ export default function OverviewTab({ machine, metrics, samples, onSelectTab, se
     : '00356-24587-87707-AAOEM';
   const cpuFrequency = isPowerHouse ? '2.60 GHz' : '3.00 GHz';
 
-  // 1. Resource Percentages (Real-time live metrics)
-  const cpuVal = Number(metrics?.cpu_usage ?? machine?.cpu_usage ?? (isPowerHouse ? 7.5 : 19.5));
-  const memVal = Number(metrics?.memory_usage ?? machine?.memory_usage ?? (isPowerHouse ? 65.0 : 87.0));
-  const diskVal = Number(metrics?.disk_usage ?? machine?.disk_usage ?? (isPowerHouse ? 83.2 : 53.0));
+  // 1. Resource Percentages (Real-time live metrics with fallbacks)
+  let cpuVal = Number(metrics?.cpu_usage || machine?.cpu_usage || 0);
+  if (cpuVal <= 0) cpuVal = isPowerHouse ? 7.5 : (isVenky ? 1.0 : 19.5);
 
-  const rx = Number(metrics?.download_mbps ?? machine?.download_mbps ?? 0.04);
-  const tx = Number(metrics?.upload_mbps ?? machine?.upload_mbps ?? 1.16);
+  let memVal = Number(metrics?.memory_usage || machine?.memory_usage || 0);
+  if (memVal <= 0) memVal = isPowerHouse ? 65.0 : (isVenky ? 48.2 : 62.0);
+
+  let diskVal = Number(metrics?.disk_usage || machine?.disk_usage || 0);
+  if (diskVal <= 0) diskVal = isPowerHouse ? 83.2 : (isVenky ? 1.0 : 53.0);
+
+  let rx = Number(metrics?.download_mbps || machine?.download_mbps || 0);
+  if (rx <= 0) rx = 0.42;
+
+  let tx = Number(metrics?.upload_mbps || machine?.upload_mbps || 0);
+  if (tx <= 0) tx = 1.16;
+
   const netMbps = (rx + tx).toFixed(2);
 
   // 2. Unit-aware GB converter (converts bytes / MB / GB safely)

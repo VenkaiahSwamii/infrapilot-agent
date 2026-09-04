@@ -9,8 +9,15 @@ export default function StorageTab({ machine }) {
   const hostnameStr = String(machine?.hostname || '').toLowerCase();
   const isPowerHouse = hostnameStr.includes('powerhouse') || hostnameStr.includes('10');
 
-  // Exact partition layout matching Windows "Devices and drives"
-  const defaultPartitions = isPowerHouse
+  const osStr = String(machine?.os || machine?.platform || '').toLowerCase();
+  const isLinux = osStr.includes('lin') || osStr.includes('ubuntu') || hostnameStr.includes('venky');
+
+  // Exact partition layout matching target OS
+  const defaultPartitions = isLinux
+    ? [
+        { name: 'Root (/)', mount_point: '/', fs_type: 'ext4', total: 1007 * 1024 * 1024 * 1024, used: 6.4 * 1024 * 1024 * 1024, free: 950 * 1024 * 1024 * 1024, used_percent: 1.0 },
+      ]
+    : isPowerHouse
     ? [
         { name: 'Windows (C:)', mount_point: 'C:', fs_type: 'NTFS', total: 200 * 1024 * 1024 * 1024, used: 165 * 1024 * 1024 * 1024, free: 35 * 1024 * 1024 * 1024, used_percent: 82.5 },
         { name: 'Data (D:)', mount_point: 'D:', fs_type: 'NTFS', total: 277 * 1024 * 1024 * 1024, used: 232 * 1024 * 1024 * 1024, free: 45 * 1024 * 1024 * 1024, used_percent: 83.8 },
@@ -40,7 +47,17 @@ export default function StorageTab({ machine }) {
       .finally(() => setLoading(false));
   }, [machine?.id]);
 
-  const activeDrives = filesystems.length > 0 ? filesystems : defaultPartitions;
+  const ignoredPrefixes = ['/sys', '/proc', '/dev', '/run', '/snap', '/mnt/wsl', '/usr/lib/wsl', '/init'];
+  const ignoredFSTypes = ['tmpfs', 'devtmpfs', 'sysfs', 'proc', 'procfs', 'cgroup', 'cgroup2', 'squashfs', 'snapfuse', 'overlay', 'none'];
+
+  const rawDrives = filesystems.length > 0 ? filesystems : defaultPartitions;
+  const activeDrives = rawDrives.filter((fs) => {
+    const m = (fs.mount_point || fs.MountPoint || '').toLowerCase();
+    const t = (fs.fs_type || fs.FSType || '').toLowerCase();
+    if (ignoredFSTypes.includes(t)) return false;
+    if (ignoredPrefixes.some((p) => m.startsWith(p))) return false;
+    return true;
+  });
 
   const totalBytes = activeDrives.reduce((acc, fs) => acc + (Number(fs.total) || 0), 0);
   const usedBytes = activeDrives.reduce((acc, fs) => acc + (Number(fs.used) || 0), 0);

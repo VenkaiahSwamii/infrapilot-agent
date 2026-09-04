@@ -44,6 +44,7 @@ export default function DeployAgentModal({ isOpen, onClose, onDeployed }) {
   const [sudoPassword, setSudoPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [targetOS, setTargetOS] = useState('auto'); // 'auto' | 'linux' | 'windows'
 
   // Testing & Execution State
   const [testingConn, setTestingConn] = useState(false);
@@ -137,6 +138,7 @@ export default function DeployAgentModal({ isOpen, onClose, onDeployed }) {
         password: remotePassword,
         ssh_key: remoteSSHKey,
         sudo_password: sudoPassword,
+        target_os: targetOS,
       });
       setTestResult(res);
     } catch (err) {
@@ -192,6 +194,7 @@ export default function DeployAgentModal({ isOpen, onClose, onDeployed }) {
         sudo_password: sudoPassword,
         server_url: serverUrl,
         enroll_token: token || tokenPrefix,
+        target_os: targetOS,
       });
 
       setDeployResult(res);
@@ -419,6 +422,34 @@ helm install infrapilot-agent infrapilot/infrapilot-agent \\
                   onChange={(e) => setRemoteUser(e.target.value)}
                   placeholder="e.g. root or ubuntu"
                 />
+              </div>
+
+              {/* Target OS Selector */}
+              <div className="form-group span-3">
+                <label>TARGET SYSTEM OS PLATFORM</label>
+                <div className="auth-method-toggle">
+                  <button
+                    type="button"
+                    className={`toggle-btn ${targetOS === 'auto' ? 'active' : ''}`}
+                    onClick={() => setTargetOS('auto')}
+                  >
+                    <Zap size={13} color="#38bdf8" /> Auto-Detect System (Recommended)
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${targetOS === 'linux' ? 'active' : ''}`}
+                    onClick={() => setTargetOS('linux')}
+                  >
+                    <Terminal size={13} color="#22c55e" /> Linux Host (Ubuntu, Debian, RHEL)
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-btn ${targetOS === 'windows' ? 'active' : ''}`}
+                    onClick={() => setTargetOS('windows')}
+                  >
+                    <Monitor size={13} color="#38bdf8" /> Windows Server / Desktop
+                  </button>
+                </div>
               </div>
 
               {/* Auth Method Selector */}

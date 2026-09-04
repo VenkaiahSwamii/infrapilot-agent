@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  Shield,
   ShieldCheck,
-  UserCheck,
   UserX,
   Search,
   Check,
   AlertCircle,
-  Key,
   Lock,
-  Zap,
-  Eye,
-  Settings,
   RefreshCw,
   Server,
 } from 'lucide-react';
-import apiClient from '../../api/client.js';
+import { apiClient } from '../../api/client.js';
 
 const DEFAULT_USER_PERMISSIONS = [
   {
@@ -144,179 +138,495 @@ export default function HostAccessModal({ isOpen, onClose, machine }) {
     }
   };
 
-  const getLevelBadgeClass = (level) => {
+  const getLevelPillClass = (level) => {
     switch (level) {
       case 'Full Control':
-        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        return 'full-control';
       case 'Operator':
-        return 'bg-sky-500/10 text-sky-400 border-sky-500/30';
+        return 'operator';
       case 'Viewer':
-        return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+        return 'viewer';
       default:
-        return 'bg-slate-800 text-slate-400 border-slate-700';
+        return 'none';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-[#0B0F19] text-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="ham-overlay" onClick={onClose}>
+      <div className="ham-card" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/50">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <ShieldCheck className="h-5 w-5" />
+        <div className="ham-header">
+          <div className="ham-header-left">
+            <div className="ham-icon-avatar">
+              <ShieldCheck size={22} color="#38bdf8" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                Host Access Control & Delegation
-              </h2>
-              <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                <Server className="h-3.5 w-3.5 text-slate-500" />
-                <span className="font-mono text-cyan-400 font-semibold">{machine.hostname}</span>
-                <span className="text-slate-600">•</span>
+              <h2 className="ham-title">Host Access Control & Delegation</h2>
+              <div className="ham-subtitle">
+                <Server size={13} color="#64748b" />
+                <span className="ham-host-name">{machine.hostname}</span>
+                <span className="ham-dot">•</span>
                 <span>{machine.ip_address}</span>
-              </p>
+              </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <X className="h-5 w-5" />
+          <button onClick={onClose} className="ham-close-btn" type="button" title="Close modal">
+            <X size={18} />
           </button>
         </div>
 
         {/* Feedback Alert */}
         {feedback && (
-          <div
-            className={`px-6 py-3 text-sm flex items-center space-x-2 border-b ${
-              feedback.type === 'error'
-                ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-            }`}
-          >
+          <div className={`ham-feedback ${feedback.type}`}>
             {feedback.type === 'error' ? (
-              <AlertCircle className="h-4 w-4 shrink-0" />
+              <AlertCircle size={16} />
             ) : (
-              <Check className="h-4 w-4 shrink-0" />
+              <Check size={16} />
             )}
             <span>{feedback.message}</span>
           </div>
         )}
 
         {/* Search Bar */}
-        <div className="px-6 pt-4 pb-2 border-b border-slate-800/60 bg-slate-900/30 flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+        <div className="ham-search-row">
+          <div className="ham-input-wrap">
+            <Search size={15} color="#64748b" className="ham-search-icon" />
             <input
               type="text"
               placeholder="Search user by name, email, or role..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-950/80 pl-9 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+              className="ham-search-input"
             />
           </div>
-          <div className="text-xs text-slate-400 font-medium px-2">
+          <span className="ham-user-count">
             {filteredUsers.length} User{filteredUsers.length !== 1 ? 's' : ''}
-          </div>
+          </span>
         </div>
 
-        {/* User Permission Table */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-3 min-h-[300px]">
+        {/* User Permission List */}
+        <div className="ham-body">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-3">
-              <RefreshCw className="h-7 w-7 animate-spin text-cyan-400" />
-              <p className="text-sm">Loading user permissions...</p>
+            <div className="ham-loading-state">
+              <RefreshCw size={28} className="ham-spin blue-txt" />
+              <p>Loading user permissions...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-              <UserX className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">No users found matching your search.</p>
+            <div className="ham-empty-state">
+              <UserX size={32} color="#475569" />
+              <p>No users found matching your search query.</p>
             </div>
           ) : (
-            filteredUsers.map((user) => {
-              const isAdmin =
-                user.user_role === 'Admin' ||
-                user.user_role === 'SuperAdmin' ||
-                user.user_role === 'OrgAdmin';
+            <div className="ham-users-list">
+              {filteredUsers.map((user) => {
+                const isAdmin =
+                  user.user_role === 'Admin' ||
+                  user.user_role === 'SuperAdmin' ||
+                  user.user_role === 'OrgAdmin';
 
-              return (
-                <div
-                  key={user.user_id}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 transition-all"
-                >
-                  {/* User info */}
-                  <div className="flex items-center space-x-3">
-                    <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-sm">
-                      {user.username?.charAt(0).toUpperCase() || 'U'}
+                return (
+                  <div key={user.user_id} className="ham-user-card">
+                    {/* Left: User Avatar & Info */}
+                    <div className="ham-user-left">
+                      <div className="ham-avatar-circle">
+                        {user.username?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div className="ham-user-info">
+                        <div className="ham-user-name-row">
+                          <span className="ham-username">{user.username}</span>
+                          <span className={`ham-role-badge ${isAdmin ? 'admin' : 'standard'}`}>
+                            {user.user_role || 'User'}
+                          </span>
+                        </div>
+                        <span className="ham-user-email">{user.email}</span>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-sm text-slate-100">
-                          {user.username}
-                        </span>
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                            isAdmin
-                              ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-                              : 'bg-slate-800 text-slate-400 border-slate-700'
+
+                    {/* Right: Permission Dropdown */}
+                    <div className="ham-user-right">
+                      {savingUserId === user.user_id ? (
+                        <RefreshCw size={16} className="ham-spin blue-txt" />
+                      ) : (
+                        <select
+                          value={user.permission_level || 'None'}
+                          onChange={(e) => handleUpdatePermission(user.user_id, e.target.value)}
+                          disabled={isAdmin}
+                          className={`ham-select-level ${getLevelPillClass(user.permission_level)} ${
+                            isAdmin ? 'disabled' : ''
                           }`}
                         >
-                          {user.user_role || 'User'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-slate-500">{user.email}</span>
+                          <option value="Full Control" className="opt-green">
+                            ⚡ Full Control
+                          </option>
+                          <option value="Operator" className="opt-sky">
+                            🛠️ Operator
+                          </option>
+                          <option value="Viewer" className="opt-purple">
+                            👁️ Viewer
+                          </option>
+                          <option value="None" className="opt-muted">
+                            🚫 No Access
+                          </option>
+                        </select>
+                      )}
                     </div>
                   </div>
-
-                  {/* Level dropdown */}
-                  <div className="flex items-center space-x-3">
-                    {savingUserId === user.user_id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin text-cyan-400" />
-                    ) : (
-                      <select
-                        value={user.permission_level || 'None'}
-                        onChange={(e) => handleUpdatePermission(user.user_id, e.target.value)}
-                        disabled={isAdmin}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold focus:outline-none cursor-pointer transition-colors ${getLevelBadgeClass(
-                          user.permission_level
-                        )} ${isAdmin ? 'opacity-80 cursor-not-allowed' : ''}`}
-                      >
-                        <option value="Full Control" className="bg-slate-900 text-emerald-400">
-                          ⚡ Full Control
-                        </option>
-                        <option value="Operator" className="bg-slate-900 text-sky-400">
-                          🛠️ Operator
-                        </option>
-                        <option value="Viewer" className="bg-slate-900 text-purple-400">
-                          👁️ Viewer
-                        </option>
-                        <option value="None" className="bg-slate-900 text-slate-400">
-                          🚫 No Access
-                        </option>
-                      </select>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-slate-800 px-6 py-4 bg-slate-900/60 text-xs text-slate-400">
-          <div className="flex items-center space-x-2">
-            <Lock className="h-3.5 w-3.5 text-slate-500" />
+        <div className="ham-footer">
+          <div className="ham-footer-left">
+            <Lock size={14} color="#64748b" />
             <span>Permissions take effect immediately for active sessions.</span>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="ham-done-btn" type="button">
             Done
           </button>
         </div>
       </div>
+
+      <style>{`
+        .ham-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 9999;
+          background: rgba(3, 7, 18, 0.85);
+          backdrop-filter: blur(12px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: hamFade 0.2s ease-out;
+        }
+
+        .ham-card {
+          width: 100%;
+          max-width: 680px;
+          max-height: 88vh;
+          background-color: #0b1120;
+          border: 1px solid rgba(56, 189, 248, 0.2);
+          border-radius: 16px;
+          box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.05);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          color: #f8fafc;
+          font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Header */
+        .ham-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 24px;
+          background: rgba(15, 23, 42, 0.6);
+          border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+        }
+        .ham-header-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .ham-icon-avatar {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          background: rgba(56, 189, 248, 0.1);
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .ham-title {
+          font-size: 16.5px;
+          font-weight: 700;
+          color: #ffffff;
+          margin: 0;
+        }
+        .ham-subtitle {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #94a3b8;
+          margin-top: 3px;
+        }
+        .ham-host-name {
+          font-family: 'JetBrains Mono', monospace;
+          color: #38bdf8;
+          font-weight: 600;
+        }
+        .ham-dot {
+          color: #475569;
+        }
+        .ham-close-btn {
+          background: transparent;
+          border: 1px solid transparent;
+          color: #94a3b8;
+          padding: 6px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .ham-close-btn:hover {
+          background: #1e293b;
+          color: #ffffff;
+          border-color: #334155;
+        }
+
+        /* Feedback Alert */
+        .ham-feedback {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 24px;
+          font-size: 13px;
+          font-weight: 500;
+          border-bottom: 1px solid transparent;
+        }
+        .ham-feedback.success {
+          background: rgba(52, 211, 153, 0.1);
+          border-color: rgba(52, 211, 153, 0.2);
+          color: #34d399;
+        }
+        .ham-feedback.error {
+          background: rgba(248, 113, 113, 0.1);
+          border-color: rgba(248, 113, 113, 0.2);
+          color: #f87171;
+        }
+
+        /* Search Row */
+        .ham-search-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 24px;
+          background: rgba(2, 6, 23, 0.4);
+          border-bottom: 1px solid #1e293b;
+          gap: 16px;
+        }
+        .ham-input-wrap {
+          position: relative;
+          flex: 1;
+        }
+        .ham-search-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+        .ham-search-input {
+          width: 100%;
+          background: #020617;
+          border: 1px solid #1e293b;
+          border-radius: 10px;
+          padding: 8px 14px 8px 36px;
+          color: #f8fafc;
+          font-size: 13px;
+          outline: none;
+          transition: all 0.15s ease;
+        }
+        .ham-search-input:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        .ham-user-count {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          white-space: nowrap;
+        }
+
+        /* Body */
+        .ham-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px 24px;
+          min-height: 280px;
+        }
+        .ham-loading-state,
+        .ham-empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 50px 0;
+          color: #64748b;
+          font-size: 13px;
+          gap: 10px;
+        }
+        .ham-users-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .ham-user-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: rgba(15, 23, 42, 0.5);
+          border: 1px solid #1e293b;
+          border-radius: 12px;
+          transition: all 0.15s ease;
+        }
+        .ham-user-card:hover {
+          background: rgba(15, 23, 42, 0.85);
+          border-color: #334155;
+        }
+        .ham-user-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .ham-avatar-circle {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #1e293b;
+          border: 1px solid #334155;
+          color: #38bdf8;
+          font-size: 14px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .ham-user-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .ham-user-name-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .ham-username {
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+        .ham-role-badge {
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 9999px;
+          border: 1px solid transparent;
+        }
+        .ham-role-badge.admin {
+          background: rgba(168, 85, 247, 0.12);
+          color: #c084fc;
+          border-color: rgba(168, 85, 247, 0.3);
+        }
+        .ham-role-badge.standard {
+          background: #1e293b;
+          color: #94a3b8;
+          border-color: #334155;
+        }
+        .ham-user-email {
+          font-size: 11.5px;
+          color: #64748b;
+        }
+
+        /* Dropdown */
+        .ham-select-level {
+          background: #020617;
+          border: 1px solid #1e293b;
+          border-radius: 8px;
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #f1f5f9;
+          outline: none;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .ham-select-level.full-control {
+          color: #34d399;
+          border-color: rgba(52, 211, 153, 0.3);
+          background: rgba(52, 211, 153, 0.08);
+        }
+        .ham-select-level.operator {
+          color: #38bdf8;
+          border-color: rgba(56, 189, 248, 0.3);
+          background: rgba(56, 189, 248, 0.08);
+        }
+        .ham-select-level.viewer {
+          color: #c084fc;
+          border-color: rgba(168, 85, 247, 0.3);
+          background: rgba(168, 85, 247, 0.08);
+        }
+        .ham-select-level.none {
+          color: #64748b;
+          border-color: #334155;
+        }
+        .ham-select-level.disabled {
+          opacity: 0.8;
+          cursor: not-allowed;
+        }
+
+        .opt-green { background: #0b1120; color: #34d399; }
+        .opt-sky { background: #0b1120; color: #38bdf8; }
+        .opt-purple { background: #0b1120; color: #c084fc; }
+        .opt-muted { background: #0b1120; color: #64748b; }
+
+        /* Footer */
+        .ham-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 24px;
+          background: rgba(15, 23, 42, 0.6);
+          border-top: 1px solid #1e293b;
+        }
+        .ham-footer-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .ham-done-btn {
+          background: #1e293b;
+          border: 1px solid #334155;
+          color: #e2e8f0;
+          font-size: 12.5px;
+          font-weight: 600;
+          padding: 8px 18px;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .ham-done-btn:hover {
+          background: #334155;
+          color: #ffffff;
+        }
+
+        .ham-spin {
+          animation: hamSpin 1s linear infinite;
+        }
+        .blue-txt {
+          color: #38bdf8;
+        }
+
+        @keyframes hamFade {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes hamSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

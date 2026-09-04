@@ -25,7 +25,7 @@ HAS_SYSTEMD=yes`
 }
 
 func TestRemoteDeployService_BuildSSHConfig(t *testing.T) {
-	svc := NewRemoteDeployService()
+	svc := NewRemoteDeployService(nil)
 
 	// 1. Password auth
 	target := RemoteDeployTarget{
@@ -58,7 +58,7 @@ func TestRemoteDeployService_BuildSSHConfig(t *testing.T) {
 }
 
 func TestRemoteDeployService_History(t *testing.T) {
-	svc := NewRemoteDeployService()
+	svc := NewRemoteDeployService(nil)
 
 	res := &RemoteDeployResult{
 		DeploymentID: "dep_test_123",
@@ -85,7 +85,7 @@ func TestRemoteDeployService_History(t *testing.T) {
 }
 
 func TestRemoteDeployService_UnreachableHostTest(t *testing.T) {
-	svc := NewRemoteDeployService()
+	svc := NewRemoteDeployService(nil)
 
 	// Port 59999 on 127.0.0.1 should fail cleanly without crashing
 	target := RemoteDeployTarget{
